@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#07070b">
+<title>CourtVision — AI Basketball Tracker</title>
+<meta name="description" content="Point your camera at the court. CourtVision tracks your body, the ball and the hoop — and counts only real dribbles and real buckets.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07070b; --text:#f4f4f8; --dim:#9a9aad;
+    --orange:#ff7a18; --orange2:#ffb347; --cyan:#2de2e6; --violet:#7b2ff7;
+    --line:rgba(255,255,255,.09); --panel:rgba(16,16,26,.6);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;
+    overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  ::selection{background:var(--orange);color:#120800}
+  h1,h2,.display{font-family:Anton,Impact,sans-serif;font-weight:400;letter-spacing:.02em;text-transform:uppercase}
+
+  /* film grain over everything */
+  body::after{content:"";position:fixed;inset:-100px;pointer-events:none;z-index:90;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation:grain .35s steps(4) infinite}
+  @keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(-40px,30px)}
+    50%{transform:translate(30px,-45px)}75%{transform:translate(-25px,-20px)}100%{transform:translate(35px,40px)}}
+
+  /* cursor glow (desktop) */
+  #cursor{position:fixed;width:340px;height:340px;border-radius:50%;pointer-events:none;z-index:5;
+    background:radial-gradient(circle,rgba(255,122,24,.13),transparent 60%);
+    transform:translate(-50%,-50%);left:-999px;top:-999px}
+  @media (pointer:coarse){#cursor{display:none}}
+
+  /* ---------- nav ---------- */
+  nav{position:fixed;top:0;left:0;right:0;z-index:80;display:flex;align-items:center;justify-content:space-between;
+    padding:16px clamp(16px,4vw,42px);transition:background .4s,backdrop-filter .4s}
+  nav.solid{background:rgba(7,7,11,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line)}
+  .logo{font-family:Anton,Impact,sans-serif;font-size:20px;letter-spacing:.06em;text-decoration:none;color:var(--text)}
+  .logo em{font-style:normal;color:var(--orange)}
+  .navcta{text-decoration:none;color:#120800;font-weight:800;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    padding:11px 22px;border-radius:999px;background:linear-gradient(90deg,var(--orange),var(--orange2));
+    box-shadow:0 0 26px rgba(255,122,24,.4);transition:transform .2s,box-shadow .2s}
+  .navcta:hover{transform:translateY(-2px);box-shadow:0 0 40px rgba(255,122,24,.65)}
+
+  /* ---------- hero ---------- */
+  #hero{position:relative;height:100svh;min-height:600px;overflow:hidden;display:flex;
+    align-items:flex-end;justify-content:center}
+  .media{position:absolute;inset:0;overflow:hidden}
+  .media canvas,.media video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .media video{opacity:0;transition:opacity 1.2s ease}
+  .media video.live{opacity:1}
+  .media .tint{position:absolute;inset:0;background:
+    linear-gradient(180deg,rgba(7,7,11,.55) 0%,rgba(7,7,11,.15) 40%,rgba(7,7,11,.92) 92%),
+    radial-gradient(90% 60% at 50% 30%,transparent 40%,rgba(7,7,11,.55) 100%)}
+  #heroInner{position:relative;z-index:2;text-align:center;padding-bottom:9vh;width:100%}
+  .kicker{display:inline-flex;align-items:center;gap:10px;font-size:12px;font-weight:800;letter-spacing:.34em;
+    text-transform:uppercase;color:var(--orange2);margin-bottom:18px}
+  .kicker::before,.kicker::after{content:"";width:34px;height:1px;background:linear-gradient(90deg,transparent,var(--orange2))}
+  .kicker::after{transform:scaleX(-1)}
+  #heroTitle{font-size:clamp(64px,17vw,240px);line-height:.88}
+  #heroTitle .line{display:block;overflow:hidden}
+  #heroTitle .line span{display:inline-block;transform:translateY(110%);animation:rise 1s cubic-bezier(.16,1,.3,1) forwards}
+  #heroTitle .line:nth-child(2) span{animation-delay:.14s;
+    background:linear-gradient(90deg,var(--orange),var(--orange2) 55%,var(--cyan));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 30px rgba(255,122,24,.35))}
+  @keyframes rise{to{transform:translateY(0)}}
+  #heroSub{max-width:560px;margin:26px auto 0;color:var(--dim);font-size:clamp(14px,1.6vw,17px);line-height:1.7;
+    opacity:0;animation:fadeup 1s .5s ease forwards}
+  #heroSub b{color:var(--text)}
+  @keyframes fadeup{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+  .heroBtns{margin-top:34px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;
+    opacity:0;animation:fadeup 1s .7s ease forwards}
+  .bigcta{display:inline-block;text-decoration:none;font-family:Anton,Impact,sans-serif;font-size:17px;letter-spacing:.12em;text-transform:uppercase;
+    color:#120800;padding:18px 40px;border-radius:999px;background:linear-gradient(90deg,var(--orange),var(--orange2));
+    box-shadow:0 0 44px rgba(255,122,24,.5),0 14px 34px rgba(0,0,0,.5);transition:transform .2s ease;position:relative;overflow:hidden}
+  .bigcta::after{content:"";position:absolute;top:0;left:-80%;width:60%;height:100%;transform:skewX(-24deg);
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:sheen 3.2s 1.4s infinite}
+  @keyframes sheen{0%{left:-80%}42%{left:130%}100%{left:130%}}
+  .bigcta:hover{transform:translateY(-3px) scale(1.03)}
+  .ghost{text-decoration:none;color:var(--text);font-weight:800;font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    padding:18px 30px;border-radius:999px;border:1px solid rgba(255,255,255,.25);transition:border-color .2s,background .2s}
+  .ghost:hover{border-color:var(--cyan);background:rgba(45,226,230,.08)}
+  #scrollHint{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);z-index:3;color:var(--dim);
+    font-size:10px;letter-spacing:.3em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;gap:10px;
+    opacity:0;animation:fadeup 1s 1.2s ease forwards}
+  #scrollHint .ball{width:14px;height:14px;border-radius:50%;
+    background:radial-gradient(circle at 32% 28%,#ffb277,#ff7a18 60%,#c24d00);
+    animation:hintbounce 1.2s cubic-bezier(.5,.05,.5,1) infinite;box-shadow:0 0 14px rgba(255,122,24,.7)}
+  @keyframes hintbounce{0%,100%{transform:translateY(0)}50%{transform:translateY(14px)}}
+
+  /* ---------- marquee ---------- */
+  #marquee{padding:26px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    background:rgba(255,255,255,.02);overflow:hidden;position:relative}
+  .mq{display:flex;gap:48px;white-space:nowrap;will-change:transform;font-family:Anton,Impact,sans-serif;
+    font-size:clamp(26px,4.6vw,52px);text-transform:uppercase}
+  .mq+.mq{margin-top:18px}
+  .mq span{color:transparent;-webkit-text-stroke:1.5px rgba(255,255,255,.3)}
+  .mq span.hot{color:var(--orange);-webkit-text-stroke:0;filter:drop-shadow(0 0 18px rgba(255,122,24,.45))}
+
+  /* ---------- film room (pinned scroll scene) ---------- */
+  #film{position:relative;height:340vh}
+  #filmSticky{position:sticky;top:0;height:100svh;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  #filmFrame{position:relative;width:100%;height:100%;overflow:hidden;will-change:transform,border-radius}
+  #filmFrame .tint{position:absolute;inset:0;background:
+    linear-gradient(180deg,rgba(7,7,11,.5),transparent 35%,transparent 62%,rgba(7,7,11,.86))}
+  .filmCap{position:absolute;z-index:3;left:0;right:0;bottom:10vh;text-align:center;padding:0 20px}
+  .filmCap .step{position:absolute;left:0;right:0;bottom:0;opacity:0;transform:translateY(30px);
+    transition:opacity .45s ease,transform .45s ease;pointer-events:none}
+  .filmCap .step.on{opacity:1;transform:none}
+  .filmCap h2{font-size:clamp(40px,8.5vw,110px);line-height:.95}
+  .filmCap h2 em{font-style:normal;color:var(--orange)}
+  .filmCap p{color:#cfcfe0;max-width:520px;margin:14px auto 0;font-size:clamp(13px,1.5vw,16px);line-height:1.65;
+    text-shadow:0 2px 18px rgba(0,0,0,.8)}
+  #filmDots{position:absolute;right:clamp(14px,3vw,34px);top:50%;transform:translateY(-50%);z-index:4;
+    display:flex;flex-direction:column;gap:12px}
+  #filmDots i{width:8px;height:8px;border-radius:99px;background:rgba(255,255,255,.25);transition:all .35s}
+  #filmDots i.on{height:30px;background:linear-gradient(180deg,var(--orange),var(--orange2))}
+
+  /* ---------- features ---------- */
+  section.pad{padding:clamp(90px,14vh,160px) clamp(18px,5vw,64px);max-width:1280px;margin:0 auto}
+  .secKick{font-size:12px;font-weight:800;letter-spacing:.34em;color:var(--cyan);text-transform:uppercase;margin-bottom:16px}
+  .secTitle{font-size:clamp(38px,6.5vw,84px);line-height:1;margin-bottom:14px}
+  .secTitle em{font-style:normal;background:linear-gradient(90deg,var(--orange),var(--orange2));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .secSub{color:var(--dim);max-width:620px;line-height:1.7;font-size:15px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:20px;margin-top:54px}
+  .card{position:relative;border-radius:26px;padding:34px 28px;background:var(--panel);border:1px solid var(--line);
+    backdrop-filter:blur(10px);overflow:hidden;transform-style:preserve-3d;transition:transform .18s ease,border-color .3s;
+    will-change:transform}
+  .card::before{content:"";position:absolute;inset:0;border-radius:26px;opacity:0;transition:opacity .35s;
+    background:radial-gradient(420px circle at var(--mx,50%) var(--my,50%),rgba(255,122,24,.16),transparent 55%)}
+  .card:hover::before{opacity:1}
+  .card:hover{border-color:rgba(255,122,24,.4)}
+  .card .icon{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;margin-bottom:22px;
+    background:linear-gradient(135deg,rgba(255,122,24,.2),rgba(123,47,247,.18));border:1px solid rgba(255,122,24,.35)}
+  .card .icon svg{width:30px;height:30px;fill:none;stroke:var(--orange2);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .card h3{font-family:Anton,Impact,sans-serif;font-size:24px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px}
+  .card p{color:var(--dim);font-size:14px;line-height:1.7}
+  .card .tag{position:absolute;top:22px;right:22px;font-size:10px;font-weight:800;letter-spacing:.16em;color:var(--cyan);
+    border:1px solid rgba(45,226,230,.4);border-radius:999px;padding:5px 10px;text-transform:uppercase}
+
+  /* reveal-on-scroll */
+  .rv{opacity:0;transform:translateY(46px)}
+  .rv.in{opacity:1;transform:none;transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1)}
+  .rv.d1.in{transition-delay:.08s}.rv.d2.in{transition-delay:.16s}.rv.d3.in{transition-delay:.24s}
+
+  /* ---------- stats ---------- */
+  #stats{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:
+    radial-gradient(60% 120% at 50% 0%,rgba(123,47,247,.12),transparent 60%)}
+  .statGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:28px;text-align:center}
+  .bigStat .n{font-family:Anton,Impact,sans-serif;font-size:clamp(48px,7vw,92px);line-height:1;
+    background:linear-gradient(180deg,#fff,#ffd9b0);-webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent}
+  .bigStat .n small{font-size:.5em}
+  .bigStat .l{margin-top:10px;font-size:11px;font-weight:800;letter-spacing:.24em;color:var(--dim);text-transform:uppercase}
+
+  /* ---------- steps ---------- */
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:18px;margin-top:54px;counter-reset:step}
+  .steps .step{position:relative;border-left:2px solid rgba(255,122,24,.4);padding:6px 0 6px 26px}
+  .steps .step::before{counter-increment:step;content:"0" counter(step);font-family:Anton,Impact,sans-serif;
+    font-size:60px;line-height:1;color:transparent;-webkit-text-stroke:1.5px rgba(255,122,24,.55);display:block;margin-bottom:12px}
+  .steps .step h4{font-family:Anton,Impact,sans-serif;font-size:20px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+  .steps .step p{color:var(--dim);font-size:14px;line-height:1.7}
+
+  /* ---------- final CTA ---------- */
+  #cta{position:relative;height:92svh;min-height:560px;display:flex;align-items:center;justify-content:center;
+    text-align:center;overflow:hidden}
+  #ctaInner{position:relative;z-index:2;padding:0 18px}
+  #ctaInner h2{font-size:clamp(46px,10vw,150px);line-height:.92}
+  #ctaInner h2 em{font-style:normal;background:linear-gradient(90deg,var(--orange),var(--orange2),var(--cyan));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 34px rgba(255,122,24,.4))}
+  #ctaInner p{color:var(--dim);margin:20px auto 34px;max-width:440px;line-height:1.7}
+
+  footer{padding:34px 20px calc(34px + env(safe-area-inset-bottom));text-align:center;color:#5b5b6e;font-size:12px;
+    border-top:1px solid var(--line)}
+  footer a{color:var(--dim)}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important}
+    html{scroll-behavior:auto}
+    .rv{opacity:1;transform:none}
+  }
+</style>
+</head>
+<body>
+<div id="cursor"></div>
+
+<nav id="nav">
+  <a class="logo" href="#hero">COURT<em>VISION</em></a>
+  <a class="navcta" href="app.html">Launch App</a>
+</nav>
+
+<!-- HERO -->
+<header id="hero">
+  <div class="media" id="heroMedia">
+    <canvas id="heroScene"></canvas>
+    <video muted loop playsinline autoplay preload="metadata" data-slot="hero"></video>
+    <div class="tint"></div>
+  </div>
+  <div id="heroInner" data-speed="-0.25">
+    <div class="kicker">AI on the blacktop</div>
+    <h1 id="heroTitle">
+      <span class="line"><span>COURT</span></span>
+      <span class="line"><span>VISION</span></span>
+    </h1>
+    <p id="heroSub">Prop up your phone and hoop. CourtVision watches the <b>body</b>, the <b>ball</b> and the <b>rim</b> in real time — every bounce earns its count, every splash gets celebrated.</p>
+    <div class="heroBtns">
+      <a class="bigcta" href="app.html">Start Tracking</a>
+      <a class="ghost" href="#film">See it work</a>
+    </div>
+  </div>
+  <div id="scrollHint"><div class="ball"></div>Scroll</div>
+</header>
+
+<!-- MARQUEE -->
+<div id="marquee">
+  <div class="mq" id="mq1"></div>
+  <div class="mq" id="mq2"></div>
+</div>
+
+<!-- FILM ROOM: pinned, scroll-driven -->
+<section id="film">
+  <div id="filmSticky">
+    <div id="filmFrame" class="media">
+      <canvas id="filmScene"></canvas>
+      <video muted loop playsinline autoplay preload="metadata" data-slot="film"></video>
+      <div class="tint"></div>
+      <div class="filmCap">
+        <div class="step" data-step="0">
+          <h2>THE <em>BODY</em></h2>
+          <p>33 joints tracked live — a neon stick figure mirrors every crossover, drop-step and jumper.</p>
+        </div>
+        <div class="step" data-step="1">
+          <h2>THE <em>BALL</em></h2>
+          <p>The rock is detected frame by frame with a comet trail. A dribble only counts when it truly hits the floor and comes back up.</p>
+        </div>
+        <div class="step" data-step="2">
+          <h2>THE <em>RIM</em></h2>
+          <p>Lock the hoop on screen — when the ball drops through, the bucket counts itself. Splash.</p>
+        </div>
+      </div>
+    </div>
+    <div id="filmDots"><i></i><i></i><i></i></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="pad" id="features">
+  <div class="secKick rv">The toolkit</div>
+  <h2 class="secTitle rv">Built to <em>keep score</em><br>for real</h2>
+  <p class="secSub rv d1">No taps, no wristbands, no guesswork. One camera, three trackers, zero fake stats.</p>
+  <div class="cards">
+    <div class="card rv d1">
+      <span class="tag">Honest</span>
+      <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3v7m0 0c-3 2.5-3 5.5 0 8m0-8c3 2.5 3 5.5 0 8M5 21h14"/><circle cx="12" cy="5.5" r="2.5"/></svg></div>
+      <h3>Real dribble counts</h3>
+      <p>A bounce state machine watches the ball fall below your hips, hit the floor and spring back. Hand waves, ball fakes and carrying the rock don't move the number.</p>
+    </div>
+    <div class="card rv d2">
+      <span class="tag">Live</span>
+      <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M4.5 9c4.5 2.2 10.5 2.2 15 0M4.5 15c4.5-2.2 10.5-2.2 15 0M12 4a14 14 0 0 1 0 16M12 4a14 14 0 0 0 0 16"/></svg></div>
+      <h3>Ball + body tracking</h3>
+      <p>The ball gets a glowing lock-on ring and motion trail; your body gets a full neon skeleton. Both rendered at camera speed, entirely on your device.</p>
+    </div>
+    <div class="card rv d3">
+      <span class="tag">Splash</span>
+      <div class="icon"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="9" rx="1"/><path d="M8 12l1.5 7M16 12l-1.5 7M9.5 12l3 7M14.5 12l-3 7M8.5 15.5h7"/></svg></div>
+      <h3>Buckets that count themselves</h3>
+      <p>Pin the rim once (or let auto-find spot it). Every make triggers the counter, a particle burst and the swish sound it deserves.</p>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section id="stats"><div class="pad">
+  <div class="statGrid">
+    <div class="bigStat rv"><div class="n"><span data-count="33">0</span></div><div class="l">Body points</div></div>
+    <div class="bigStat rv d1"><div class="n"><span data-count="60">0</span><small>fps</small></div><div class="l">Overlay speed</div></div>
+    <div class="bigStat rv d2"><div class="n"><span data-count="0">0</span></div><div class="l">Fake dribbles</div></div>
+    <div class="bigStat rv d3"><div class="n"><span data-count="100">0</span><small>%</small></div><div class="l">On-device</div></div>
+  </div>
+</div></section>
+
+<!-- HOW -->
+<section class="pad" id="how">
+  <div class="secKick rv">Warm-up</div>
+  <h2 class="secTitle rv">Thirty seconds<br>to <em>tip-off</em></h2>
+  <div class="steps">
+    <div class="step rv d1"><h4>Prop the phone</h4><p>Set it landscape on a bench or bag so the camera sees you and the floor. Good light helps the AI see the ball.</p></div>
+    <div class="step rv d2"><h4>Pin the rim</h4><p>Tap HOOP, drag the glowing rim over the real one, hit done. It's remembered for next time.</p></div>
+    <div class="step rv d3"><h4>Just hoop</h4><p>Dribbles, streaks, tempo and buckets count themselves. Hit reset between drills, ball out.</p></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta">
+  <div class="media">
+    <canvas id="ctaScene"></canvas>
+    <div class="tint"></div>
+  </div>
+  <div id="ctaInner" data-speed="-0.15">
+    <h2 class="rv">BALL<br><em>DON'T LIE</em></h2>
+    <p class="rv d1">Your camera is the scorekeeper now. No sign-up, nothing installed — it runs right in the browser.</p>
+    <a class="bigcta rv d2" href="app.html">Step on the court</a>
+  </div>
+</section>
+
+<footer>
+  CourtVision · tracking runs 100% in your browser — no video ever leaves your device ·
+  <a href="app.html">open the app</a>
+</footer>
+
+<script>
+/* ================= cinematic canvas scenes (always-on fallback + backdrop) ================= */
+class CourtScene {
+  constructor(canvas, opts = {}) {
+    this.cv = canvas; this.ctx = canvas.getContext('2d');
+    this.o = Object.assign({ hoopX: .82, zoom: 1, ballX: .34, dust: 26, panRange: .06 }, opts);
+    this.t = 0; this.prog = 0;
+    this.ball = { y: .3, vy: 0, x: this.o.ballX };
+    this.sparks = []; this.trail = [];
+    this.dust = Array.from({ length: this.o.dust }, () => ({
+      x: Math.random(), y: Math.random(), r: Math.random() * 1.8 + .4,
+      vx: (Math.random() - .5) * .01, vy: -Math.random() * .008 - .002, a: Math.random() * .5 + .15
+    }));
+    this.resize();
+  }
+  resize() {
+    const r = this.cv.getBoundingClientRect();
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    this.w = Math.max(r.width, 2); this.h = Math.max(r.height, 2);
+    this.cv.width = this.w * dpr; this.cv.height = this.h * dpr;
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  step(dt) {
+    this.t += dt;
+    const b = this.ball, floor = .78;
+    b.vy += 2.6 * dt;                       // gravity (normalized units/s²)
+    b.y += b.vy * dt;
+    if (b.y > floor) {                      // bounce: fixed rebound so energy stays constant
+      b.y = floor; b.vy = -(1.28 + Math.sin(this.t * .9) * .12);
+      const bx = this.px(b.x), by = this.py(floor);
+      for (let i = 0; i < 10; i++) {
+        const a = -Math.PI * Math.random();
+        this.sparks.push({ x: bx, y: by, vx: Math.cos(a) * 140, vy: Math.sin(a) * 110, life: 1 });
+      }
+    }
+    b.x = this.o.ballX + Math.sin(this.t * .4) * .05;
+    this.trail.push({ x: b.x, y: b.y, t: this.t });
+    while (this.trail.length && this.t - this.trail[0].t > .5) this.trail.shift();
+    for (const d of this.dust) {
+      d.x += d.vx * dt; d.y += d.vy * dt;
+      if (d.y < -0.02) { d.y = 1.02; d.x = Math.random(); }
+    }
+    this.sparks = this.sparks.filter(s => (s.life -= dt * 2.2) > 0);
+    for (const s of this.sparks) { s.vy += 500 * dt; s.x += s.vx * dt; s.y += s.vy * dt; }
+  }
+  px(nx) { return (nx - .5 + (this.prog - .5) * -this.o.panRange) * this.w * this.o.zoom + this.w / 2; }
+  py(ny) { return (ny - .5) * this.h * this.o.zoom + this.h / 2; }
+  draw() {
+    const { ctx, w, h } = this;
+    /* sky */
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, '#0b0b18'); sky.addColorStop(.55, '#10101f'); sky.addColorStop(1, '#07070b');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+    const glow = ctx.createRadialGradient(w * .78, h * .18, 0, w * .78, h * .18, w * .5);
+    glow.addColorStop(0, 'rgba(123,47,247,.16)'); glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
+    const glow2 = ctx.createRadialGradient(w * .18, h * .3, 0, w * .18, h * .3, w * .45);
+    glow2.addColorStop(0, 'rgba(255,122,24,.1)'); glow2.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow2; ctx.fillRect(0, 0, w, h);
+
+    /* floor with perspective lines */
+    const horizon = this.py(.62), floorY = this.py(.78);
+    const fl = ctx.createLinearGradient(0, horizon, 0, h);
+    fl.addColorStop(0, '#131320'); fl.addColorStop(1, '#0a0a12');
+    ctx.fillStyle = fl; ctx.fillRect(0, horizon, w, h - horizon);
+    ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 1;
+    const vp = this.px(.5);
+    for (let i = -8; i <= 8; i++) {
+      ctx.beginPath(); ctx.moveTo(vp + i * w * .01, horizon); ctx.lineTo(vp + i * w * .22, h); ctx.stroke();
+    }
+    for (let i = 1; i <= 6; i++) {
+      const y = horizon + (h - horizon) * (i / 6) ** 1.7;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    /* center circle */
+    ctx.strokeStyle = 'rgba(255,122,24,.22)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(this.px(.42), floorY + (h - floorY) * .3, w * .16, w * .035, 0, 0, Math.PI * 2); ctx.stroke();
+
+    /* hoop */
+    const hx = this.px(this.o.hoopX), hy = this.py(.30), s = h / 720 * this.o.zoom;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(210,215,235,.5)'; ctx.lineWidth = 5 * s;
+    ctx.beginPath(); ctx.moveTo(hx + 60 * s, floorY + 30 * s); ctx.lineTo(hx + 60 * s, hy - 60 * s); ctx.stroke(); // pole
+    ctx.strokeStyle = 'rgba(210,215,235,.65)'; ctx.lineWidth = 3 * s;
+    ctx.strokeRect(hx - 40 * s, hy - 70 * s, 100 * s, 76 * s);                                       // backboard
+    ctx.strokeStyle = 'rgba(255,255,255,.35)';
+    ctx.strokeRect(hx - 22 * s, hy - 34 * s, 44 * s, 34 * s);                                        // inner square
+    ctx.shadowColor = 'rgba(45,226,230,.9)'; ctx.shadowBlur = 18 * s;
+    ctx.strokeStyle = '#2de2e6'; ctx.lineWidth = 4 * s;
+    ctx.beginPath(); ctx.ellipse(hx - 22 * s, hy + 4 * s, 26 * s, 9 * s, 0, 0, Math.PI * 2); ctx.stroke(); // rim
+    ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1.4 * s;
+    ctx.beginPath();
+    for (let i = 0; i <= 5; i++) {
+      const fx = hx - 48 * s + (52 * s) * (i / 5), tx = hx - 36 * s + (28 * s) * (i / 5);
+      ctx.moveTo(fx, hy + 4 * s); ctx.lineTo(tx, hy + 34 * s);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    /* ball trail */
+    for (let i = 1; i < this.trail.length; i++) {
+      const a = i / this.trail.length;
+      const p0 = this.trail[i - 1], p1 = this.trail[i];
+      ctx.strokeStyle = `rgba(255,130,30,${a * .5})`; ctx.lineWidth = a * 9 * (h / 720); ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(this.px(p0.x), this.py(p0.y)); ctx.lineTo(this.px(p1.x), this.py(p1.y)); ctx.stroke();
+    }
+    /* ball with squash */
+    const bx = this.px(this.ball.x), by = this.py(this.ball.y), br = 20 * (h / 720) * this.o.zoom;
+    const squash = this.ball.y > .765 ? 1.25 : 1;
+    ctx.save();
+    ctx.translate(bx, by); ctx.scale(squash, 1 / squash);
+    ctx.shadowColor = 'rgba(255,122,24,.8)'; ctx.shadowBlur = 30;
+    const bg = ctx.createRadialGradient(-br * .35, -br * .35, br * .1, 0, 0, br);
+    bg.addColorStop(0, '#ffc089'); bg.addColorStop(.55, '#ff7a18'); bg.addColorStop(1, '#a33d00');
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, 0, br, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(60,20,0,.55)'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(0, 0, br, 0, Math.PI * 2);
+    ctx.moveTo(-br, 0); ctx.quadraticCurveTo(0, br * .35, br, 0);
+    ctx.moveTo(0, -br); ctx.quadraticCurveTo(br * .35, 0, 0, br);
+    ctx.stroke();
+    ctx.restore();
+    /* floor reflection */
+    const rg = ctx.createRadialGradient(bx, this.py(.79), 0, bx, this.py(.79), br * 3);
+    rg.addColorStop(0, 'rgba(255,122,24,.22)'); rg.addColorStop(1, 'transparent');
+    ctx.fillStyle = rg;
+    ctx.beginPath(); ctx.ellipse(bx, this.py(.79), br * 3, br * .7, 0, 0, Math.PI * 2); ctx.fill();
+
+    /* sparks + dust */
+    for (const spk of this.sparks) {
+      ctx.globalAlpha = spk.life;
+      ctx.fillStyle = '#ffb347';
+      ctx.beginPath(); ctx.arc(spk.x, spk.y, 2.4 * spk.life + .5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    for (const d of this.dust) {
+      ctx.fillStyle = `rgba(255,255,255,${d.a * .3})`;
+      ctx.beginPath(); ctx.arc(d.x * w, d.y * h, d.r, 0, Math.PI * 2); ctx.fill();
+    }
+    /* vignette */
+    const v = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .35, w / 2, h / 2, Math.max(w, h) * .75);
+    v.addColorStop(0, 'transparent'); v.addColorStop(1, 'rgba(0,0,0,.55)');
+    ctx.fillStyle = v; ctx.fillRect(0, 0, w, h);
+  }
+}
+
+const scenes = [
+  new CourtScene(document.getElementById('heroScene'), { hoopX: .84, ballX: .3, zoom: 1 }),
+  new CourtScene(document.getElementById('filmScene'), { hoopX: .74, ballX: .34, zoom: 1.35, panRange: .18 }),
+  new CourtScene(document.getElementById('ctaScene'),  { hoopX: .62, ballX: .4, zoom: 1.9, dust: 40 })
+];
+addEventListener('resize', () => scenes.forEach(s => s.resize()));
+
+/* ================= real footage layer (best-effort, silent fallback) ================= */
+/* Each slot tries a list of free stock clips; whichever loads first fades in over the canvas. */
+const FOOTAGE = {
+  hero: [
+    'https://assets.mixkit.co/videos/preview/mixkit-one-on-one-in-a-basketball-game-2286-large.mp4',
+    'https://assets.mixkit.co/videos/preview/mixkit-basketball-player-scoring-a-basket-2289-large.mp4',
+    'https://assets.mixkit.co/videos/preview/mixkit-man-playing-basketball-4518-large.mp4'
+  ],
+  film: [
+    'https://assets.mixkit.co/videos/preview/mixkit-basketball-player-dribbling-the-ball-2285-large.mp4',
+    'https://assets.mixkit.co/videos/preview/mixkit-young-man-practicing-basketball-4517-large.mp4',
+    'https://assets.mixkit.co/videos/preview/mixkit-one-on-one-in-a-basketball-game-2286-large.mp4'
+  ]
+};
+document.querySelectorAll('video[data-slot]').forEach(v => {
+  const list = FOOTAGE[v.dataset.slot] || [];
+  let i = 0;
+  const tryNext = () => {
+    if (i >= list.length) { v.remove(); return; }   // canvas scene carries the visual
+    v.src = list[i++];
+    v.load();
+  };
+  v.addEventListener('error', tryNext);
+  v.addEventListener('canplay', () => { v.classList.add('live'); v.play().catch(() => {}); });
+  tryNext();
+});
+
+/* ================= marquee ================= */
+const WORDS1 = ['Every bounce counts', 'Splash', 'Track the rock', 'No fake stats', 'Buckets'];
+const WORDS2 = ['33 body points', 'Lock the rim', 'On-device AI', 'Comet trails', 'Streaks on fire'];
+function fillMq(el, words) {
+  let html = '';
+  for (let r = 0; r < 6; r++) words.forEach((wd, j) => html += `<span class="${(j + r) % 3 === 0 ? 'hot' : ''}">${wd}</span>`);
+  el.innerHTML = html;
+}
+fillMq(document.getElementById('mq1'), WORDS1);
+fillMq(document.getElementById('mq2'), WORDS2);
+
+/* ================= scroll engine ================= */
+const lerp = (a, b, f) => a + (b - a) * f;
+let scrollCur = scrollY, scrollVel = 0;
+let mqX1 = 0, mqX2 = 0;
+const film = document.getElementById('film');
+const filmFrame = document.getElementById('filmFrame');
+const filmSteps = [...document.querySelectorAll('.filmCap .step')];
+const filmDots = [...document.querySelectorAll('#filmDots i')];
+const filmVideo = document.querySelector('video[data-slot="film"]');
+const parallaxEls = [...document.querySelectorAll('[data-speed]')];
+const nav = document.getElementById('nav');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let lastT = performance.now();
+function tick(t) {
+  requestAnimationFrame(tick);
+  const dt = Math.min((t - lastT) / 1000, .05); lastT = t;
+  const target = scrollY;
+  scrollVel = lerp(scrollVel, target - scrollCur, .12);
+  scrollCur = lerp(scrollCur, target, .16);
+
+  nav.classList.toggle('solid', target > 40);
+
+  /* parallax layers — offset relative to where the (untransformed) parent sits in the viewport */
+  if (!reduceMotion) for (const el of parallaxEls) {
+    const sp = parseFloat(el.dataset.speed);
+    const pr = el.parentElement.getBoundingClientRect();
+    const off = (pr.top + pr.height / 2 - innerHeight / 2) * -sp;
+    el.style.transform = `translateY(${off.toFixed(1)}px)`;
+  }
+
+  /* marquee — base drift + scroll velocity kick, opposite directions */
+  const kick = Math.min(Math.abs(scrollVel) * .06, 6);
+  mqX1 -= (.6 + kick); mqX2 += (.55 + kick);
+  const mq1 = document.getElementById('mq1'), mq2 = document.getElementById('mq2');
+  const half1 = mq1.scrollWidth / 2 || 1, half2 = mq2.scrollWidth / 2 || 1;
+  if (mqX1 < -half1) mqX1 += half1;
+  if (mqX2 > 0) mqX2 -= half2;
+  mq1.style.transform = `translateX(${mqX1}px)`;
+  mq2.style.transform = `translateX(${mqX2}px)`;
+
+  /* film room: 0..1 progress across the pinned span */
+  const fr = film.getBoundingClientRect();
+  const span = fr.height - innerHeight;
+  const p = Math.min(Math.max(-fr.top / Math.max(span, 1), 0), 1);
+  const intro = Math.min(p / .18, 1);                        // grows from card to full-bleed
+  filmFrame.style.borderRadius = (1 - intro) * 34 + 'px';
+  filmFrame.style.transform = `scale(${.86 + intro * .14}) translateY(${(1 - intro) * 40}px)`;
+  const stepIdx = p < .38 ? 0 : p < .72 ? 1 : 2;
+  filmSteps.forEach((s, i) => s.classList.toggle('on', i === stepIdx && p > .04));
+  filmDots.forEach((d, i) => d.classList.toggle('on', i === stepIdx));
+  scenes[1].prog = p;
+  /* scrub real footage with the scroll when it's loaded */
+  if (filmVideo && filmVideo.classList.contains('live') && filmVideo.duration > 0) {
+    filmVideo.pause();
+    const want = p * Math.max(filmVideo.duration - .1, 0);
+    if (Math.abs((filmVideo.currentTime || 0) - want) > .06) filmVideo.currentTime = want;
+  }
+
+  /* canvas scenes (skip offscreen ones) */
+  for (const s of scenes) {
+    const r = s.cv.getBoundingClientRect();
+    if (r.bottom < -80 || r.top > innerHeight + 80) continue;
+    s.step(dt); s.draw();
+  }
+}
+requestAnimationFrame(tick);
+
+/* reveals */
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+}), { threshold: .18 });
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
+/* animated counters */
+const cio = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  cio.unobserve(e.target);
+  const el = e.target, end = +el.dataset.count, t0 = performance.now();
+  (function run(t) {
+    const f = Math.min((t - t0) / 1400, 1), ease = 1 - Math.pow(1 - f, 4);
+    el.textContent = Math.round(end * ease);
+    if (f < 1) requestAnimationFrame(run);
+  })(t0);
+}), { threshold: .6 });
+document.querySelectorAll('[data-count]').forEach(el => cio.observe(el));
+
+/* 3D tilt cards + spotlight */
+document.querySelectorAll('.card').forEach(card => {
+  card.addEventListener('pointermove', e => {
+    const r = card.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    card.style.setProperty('--mx', x * 100 + '%');
+    card.style.setProperty('--my', y * 100 + '%');
+    if (matchMedia('(pointer:fine)').matches)
+      card.style.transform = `perspective(800px) rotateY(${(x - .5) * 10}deg) rotateX(${(0.5 - y) * 8}deg) translateY(-4px)`;
+  });
+  card.addEventListener('pointerleave', () => card.style.transform = '');
+});
+
+/* cursor glow */
+const cursor = document.getElementById('cursor');
+addEventListener('pointermove', e => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
+</script>
+</body>
+</html>

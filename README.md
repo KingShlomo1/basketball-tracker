@@ -8,9 +8,15 @@ browser and tracks, live:
 - **The hoop** — pin the rim once (or use auto-find); it's remembered for next time
 - **Dribbles** — counted by a bounce state machine: the ball has to actually drop
   below your hips, hit the floor and spring back up. Hand waves and ball fakes
-  don't count. Streaks, tempo sparkline and dribbles-per-minute included.
+  don't count. Streaks, tempo sparkline, dribbles-per-minute and
+  left-hand / right-hand splits included.
 - **Buckets** — when the ball passes down through the pinned rim: counter,
-  particle burst, swish sound.
+  particle burst, swish sound, and a slow-mo **instant replay**. Rim-area misses
+  are tracked too, so you get **attempts and shooting accuracy %**.
+- **Game modes** — ⚡ *Dribble Sprint* (most real dribbles in 60 s) and
+  💦 *Splash Five* (race the clock to 5 makes), with 3-2-1 countdowns, a
+  **voice announcer**, personal **records** saved on-device, and a shareable
+  session stat card.
 
 Everything runs on-device. No video is uploaded anywhere.
 

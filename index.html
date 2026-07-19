@@ -272,7 +272,7 @@
       <span class="tag">Splash</span>
       <div class="icon"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="9" rx="1"/><path d="M8 12l1.5 7M16 12l-1.5 7M9.5 12l3 7M14.5 12l-3 7M8.5 15.5h7"/></svg></div>
       <h3>Buckets that count themselves</h3>
-      <p>Pin the rim once (or let auto-find spot it). Every make triggers the counter, a particle burst and the swish sound it deserves.</p>
+      <p>Pin the rim once (or let auto-find spot it). Makes, misses and shooting % track themselves — every splash gets a particle burst, a swish and an instant replay.</p>
     </div>
   </div>
 </section>
@@ -294,7 +294,7 @@
   <div class="steps">
     <div class="step rv d1"><h4>Prop the phone</h4><p>Set it landscape on a bench or bag so the camera sees you and the floor. Good light helps the AI see the ball.</p></div>
     <div class="step rv d2"><h4>Pin the rim</h4><p>Tap HOOP, drag the glowing rim over the real one, hit done. It's remembered for next time.</p></div>
-    <div class="step rv d3"><h4>Just hoop</h4><p>Dribbles, streaks, tempo and buckets count themselves. Hit reset between drills, ball out.</p></div>
+    <div class="step rv d3"><h4>Just hoop</h4><p>Dribbles, streaks, tempo, buckets and accuracy count themselves. Race the Dribble Sprint or Splash Five, chase your records, share the stat card.</p></div>
   </div>
 </section>
 
@@ -496,8 +496,8 @@ document.querySelectorAll('video[data-slot]').forEach(v => {
 });
 
 /* ================= marquee ================= */
-const WORDS1 = ['Every bounce counts', 'Splash', 'Track the rock', 'No fake stats', 'Buckets'];
-const WORDS2 = ['33 body points', 'Lock the rim', 'On-device AI', 'Comet trails', 'Streaks on fire'];
+const WORDS1 = ['Every bounce counts', 'Splash', 'Track the rock', 'No fake stats', 'Instant replay', 'Buckets'];
+const WORDS2 = ['33 body points', 'Lock the rim', 'Shot accuracy', 'Dribble Sprint', 'Splash Five', 'Streaks on fire'];
 function fillMq(el, words) {
   let html = '';
   for (let r = 0; r < 6; r++) words.forEach((wd, j) => html += `<span class="${(j + r) % 3 === 0 ? 'hot' : ''}">${wd}</span>`);

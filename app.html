@@ -24,7 +24,7 @@
   /* ---------- HUD ---------- */
   .hud-top{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;gap:10px;
     padding:calc(10px + env(safe-area-inset-top)) 12px 10px;z-index:20;pointer-events:none}
-  .stat{min-width:104px;text-align:center;padding:10px 14px;border-radius:18px;
+  .stat{min-width:100px;text-align:center;padding:10px 12px;border-radius:18px;
     background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
     border:1px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.35);position:relative;overflow:hidden}
   .stat::before{content:"";position:absolute;inset:0;border-radius:18px;padding:1px;
@@ -38,6 +38,7 @@
   .stat.pop .num{transform:scale(1.28)}
   .stat .lbl{font-size:10px;font-weight:800;letter-spacing:.22em;color:var(--dim);margin-top:4px;text-transform:uppercase}
   .stat .sub{font-size:10px;font-weight:600;color:var(--orange2);height:12px;margin-top:2px}
+  .stat .sub.urgent{color:#ff5d5d;animation:blink 1s infinite}
 
   .hud-mid{position:fixed;left:12px;top:50%;transform:translateY(-50%);z-index:20;display:flex;
     flex-direction:column;gap:8px;pointer-events:none}
@@ -50,14 +51,14 @@
   @keyframes blink{50%{opacity:.35}}
   #spark{width:118px;height:34px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
 
-  .hud-bot{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:12px;
-    padding:12px 12px calc(14px + env(safe-area-inset-bottom));z-index:20}
-  .btn{pointer-events:auto;border:1px solid var(--line);background:var(--panel);color:var(--text);
-    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:18px;
-    min-width:62px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-    font-family:inherit;font-size:10px;font-weight:800;letter-spacing:.12em;cursor:pointer;
-    transition:transform .12s,background .2s;text-transform:uppercase;color:var(--dim)}
-  .btn svg{width:22px;height:22px;fill:none;stroke:var(--text);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .hud-bot{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:8px;
+    padding:12px 8px calc(14px + env(safe-area-inset-bottom));z-index:20}
+  .btn{pointer-events:auto;border:1px solid var(--line);background:var(--panel);color:var(--dim);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:16px;
+    min-width:52px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    font-family:inherit;font-size:9px;font-weight:800;letter-spacing:.1em;cursor:pointer;
+    transition:transform .12s,background .2s;text-transform:uppercase;flex:0 1 auto;padding:0 8px}
+  .btn svg{width:21px;height:21px;fill:none;stroke:var(--text);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .btn:active{transform:scale(.92)}
   .btn.accent{background:linear-gradient(135deg,rgba(255,122,24,.25),rgba(123,47,247,.2));border-color:rgba(255,122,24,.45)}
   .btn.active{border-color:var(--cyan);color:var(--cyan)}
@@ -86,7 +87,6 @@
     box-shadow:0 0 40px rgba(255,122,24,.5),0 12px 30px rgba(0,0,0,.5);transition:transform .15s}
   #startBtn:active{transform:scale(.94)}
   #gate .tip{font-size:11px;color:#6d6d80;letter-spacing:.06em}
-  #gate a{color:var(--dim)}
 
   /* ---------- hoop edit ---------- */
   #hoopBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom));
@@ -101,10 +101,73 @@
     padding:9px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;cursor:pointer;text-transform:uppercase}
   .mini.accent{background:linear-gradient(90deg,var(--orange),var(--orange2));color:#120800;border:none}
 
+  /* ---------- sheets (mode picker / results) ---------- */
+  .sheet{position:fixed;inset:0;z-index:45;display:none;align-items:flex-end;justify-content:center;
+    background:rgba(4,4,8,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .sheet.show{display:flex}
+  .sheet .panel{width:min(560px,100%);max-height:86vh;overflow:auto;border-radius:26px 26px 0 0;
+    background:rgba(14,14,24,.96);border:1px solid var(--line);border-bottom:none;
+    padding:24px 20px calc(24px + env(safe-area-inset-bottom));animation:slideup .35s cubic-bezier(.16,1,.3,1)}
+  @keyframes slideup{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+  .sheet h2{font-family:Anton,Impact,sans-serif;font-size:26px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}
+  .sheet h2 em{font-style:normal;color:var(--orange)}
+  .sheet .sub{color:var(--dim);font-size:12px;margin-bottom:18px}
+  .modeCard{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:16px;border-radius:18px;
+    background:rgba(255,255,255,.04);border:1px solid var(--line);cursor:pointer;color:var(--text);
+    font-family:inherit;margin-bottom:10px;transition:border-color .2s,background .2s}
+  .modeCard:active{background:rgba(255,122,24,.12);border-color:rgba(255,122,24,.5)}
+  .modeCard .ico{font-size:26px;flex:none}
+  .modeCard b{display:block;font-family:Anton,Impact,sans-serif;font-weight:400;font-size:17px;
+    letter-spacing:.06em;text-transform:uppercase}
+  .modeCard span{display:block;font-size:12px;color:var(--dim);margin-top:2px}
+  .modeCard .rec{margin-left:auto;text-align:right;font-size:10px;color:var(--cyan);font-weight:800;
+    letter-spacing:.08em;text-transform:uppercase;flex:none}
+  .modeCard .rec b{font-size:18px;color:var(--text)}
+  .switchRow{display:flex;align-items:center;justify-content:space-between;padding:14px 4px 2px;font-size:13px;font-weight:600}
+  .switch{position:relative;width:46px;height:26px;border-radius:99px;background:rgba(255,255,255,.12);
+    border:1px solid var(--line);cursor:pointer;transition:background .2s;flex:none}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+    background:#888;transition:transform .2s,background .2s}
+  .switch.on{background:rgba(255,122,24,.5)}
+  .switch.on::after{transform:translateX(20px);background:var(--orange2)}
+  .recap{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+  .recap div{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:14px;text-align:center}
+  .recap .n{font-family:Anton,Impact,sans-serif;font-size:34px;line-height:1;
+    background:linear-gradient(180deg,#fff,#ffd9b0);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .recap .l{font-size:9px;font-weight:800;letter-spacing:.2em;color:var(--dim);text-transform:uppercase;margin-top:6px}
+  .newRec{color:var(--good);font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    text-align:center;margin-bottom:8px;min-height:14px}
+  .sheetBtns{display:flex;gap:10px;margin-top:8px}
+  .sheetBtns .mini{flex:1;text-align:center;padding:14px}
+
+  /* ---------- countdown ---------- */
+  #count{position:fixed;inset:0;z-index:48;display:none;align-items:center;justify-content:center;
+    background:rgba(4,4,8,.45);pointer-events:none}
+  #count.show{display:flex}
+  #count span{font-family:Anton,Impact,sans-serif;font-size:clamp(120px,40vw,300px);
+    background:linear-gradient(180deg,var(--orange2),var(--orange));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 40px rgba(255,122,24,.6));animation:countpop .95s cubic-bezier(.2,1.3,.4,1)}
+  @keyframes countpop{0%{transform:scale(.3);opacity:0}30%{transform:scale(1.1);opacity:1}60%{transform:scale(1)}100%{opacity:.9}}
+
+  /* ---------- instant replay ---------- */
+  #replayBox{position:fixed;z-index:35;left:50%;top:50%;transform:translate(-50%,-50%) scale(.8);opacity:0;
+    pointer-events:none;border-radius:22px;overflow:hidden;border:1px solid rgba(255,122,24,.5);
+    box-shadow:0 0 60px rgba(255,122,24,.35),0 30px 80px rgba(0,0,0,.7);background:#000;
+    transition:opacity .3s,transform .3s}
+  #replayBox.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  #replayCv{display:block;width:min(74vw,420px)}
+  #replayBox .tag{position:absolute;top:10px;left:12px;display:flex;align-items:center;gap:7px;
+    font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:#fff;
+    text-shadow:0 1px 6px #000}
+  #replayBox .tag i{width:9px;height:9px;border-radius:50%;background:#ff3b3b;animation:blink 1s infinite}
+  #replayBox .scan{position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(0,0,0,.28) 3px 4px)}
+
   /* ---------- toasts & fx ---------- */
   #toast{position:fixed;top:26%;left:50%;transform:translate(-50%,-50%) scale(.8);z-index:30;
     font-family:Anton,Impact,sans-serif;font-size:clamp(38px,10vw,72px);letter-spacing:.04em;opacity:0;
-    pointer-events:none;text-transform:uppercase;
+    pointer-events:none;text-transform:uppercase;white-space:nowrap;
     background:linear-gradient(90deg,var(--orange),var(--orange2),var(--cyan));
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
     filter:drop-shadow(0 0 24px rgba(255,122,24,.6))}
@@ -136,6 +199,7 @@
 <div class="hud-mid">
   <div class="chip"><span class="dot" id="ballDot"></span><span id="ballChip">Ball: searching…</span></div>
   <div class="chip"><span class="dot" id="hoopDot"></span><span id="hoopChip">Hoop: not set</span></div>
+  <div class="chip" id="handChip" style="display:none">🖐 <span id="handTxt"></span></div>
   <canvas id="spark" width="236" height="68"></canvas>
 </div>
 
@@ -143,6 +207,7 @@
   <button class="btn" id="pauseBtn"><svg viewBox="0 0 24 24"><path id="pauseIcon" d="M8 5v14M16 5v14"/></svg><span id="pauseLbl">Pause</span></button>
   <button class="btn" id="flipBtn"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4zM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M17 3l2 2-2 2"/></svg><span>Flip</span></button>
   <button class="btn accent" id="hoopBtn"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="8" rx="1"/><path d="M8 12l1.5 6M16 12l-1.5 6M9 12l3 6M15 12l-3 6M8 15h8"/></svg><span>Hoop</span></button>
+  <button class="btn accent" id="modeBtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2.5"/></svg><span>Modes</span></button>
   <button class="btn" id="soundBtn"><svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6l-5 4H4zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg><span>Sound</span></button>
   <button class="btn" id="resetBtn"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg><span>Reset</span></button>
 </div>
@@ -157,6 +222,55 @@
   </div>
 </div>
 
+<!-- mode picker -->
+<div class="sheet" id="modeSheet">
+  <div class="panel">
+    <h2>Game <em>Modes</em></h2>
+    <div class="sub">Pick a challenge — records are saved on this device.</div>
+    <button class="modeCard" data-mode="free"><span class="ico">🏀</span>
+      <span><b>Free Play</b><span>Open run. Everything is tracked, nothing ends.</span></span></button>
+    <button class="modeCard" data-mode="sprint60"><span class="ico">⚡</span>
+      <span><b>Dribble Sprint</b><span>60 seconds. As many real dribbles as you can.</span></span>
+      <span class="rec">Best<br><b id="recSprint">—</b></span></button>
+    <button class="modeCard" data-mode="splash5"><span class="ico">💦</span>
+      <span><b>Splash Five</b><span>Race the clock to sink 5 buckets. Needs the hoop set.</span></span>
+      <span class="rec">Fastest<br><b id="recSplash">—</b></span></button>
+    <div class="switchRow"><span>🎙 Voice announcer</span><div class="switch" id="voiceSwitch"></div></div>
+    <div class="switchRow" style="color:var(--dim);font-weight:400;font-size:11px">
+      <span>All-time: <b id="recTotals" style="color:var(--text)">0 dribbles · 0 buckets</b> · best streak <b id="recStreak" style="color:var(--text)">0</b></span>
+    </div>
+    <div class="sheetBtns"><button class="mini" id="modeClose">Close</button></div>
+  </div>
+</div>
+
+<!-- results -->
+<div class="sheet" id="resultSheet">
+  <div class="panel">
+    <h2 id="resTitle">Time!</h2>
+    <div class="sub" id="resSub"></div>
+    <div class="newRec" id="resRecord"></div>
+    <div class="recap">
+      <div><div class="n" id="resA">0</div><div class="l" id="resAL">Dribbles</div></div>
+      <div><div class="n" id="resB">0</div><div class="l" id="resBL">Best streak</div></div>
+      <div><div class="n" id="resC">0</div><div class="l" id="resCL">Per minute</div></div>
+      <div><div class="n" id="resD">0</div><div class="l" id="resDL">Buckets</div></div>
+    </div>
+    <div class="sheetBtns">
+      <button class="mini" id="resShare">📤 Share card</button>
+      <button class="mini accent" id="resAgain">Run it back</button>
+    </div>
+    <div class="sheetBtns"><button class="mini" id="resFree">Back to free play</button></div>
+  </div>
+</div>
+
+<div id="count"><span id="countNum">3</span></div>
+
+<div id="replayBox">
+  <canvas id="replayCv"></canvas>
+  <div class="scan"></div>
+  <div class="tag"><i></i>Instant Replay</div>
+</div>
+
 <div id="toast"></div>
 <div id="flash"></div>
 <div id="err"></div>
@@ -164,7 +278,7 @@
 <div id="gate">
   <div id="ballLoader"><div class="ball"></div><div class="shadow"></div></div>
   <h1>COURT<em>VISION</em></h1>
-  <p>Point the camera at the player. The AI tracks the <b>body</b>, the <b>ball</b> and the <b>hoop</b> — and only counts a dribble when the ball really bounces.</p>
+  <p>Point the camera at the player. The AI tracks the <b>body</b>, the <b>ball</b> and the <b>hoop</b> — real dribbles, real buckets, real accuracy. Challenges, records, instant replays.</p>
   <button id="startBtn">Start Tracking</button>
   <div class="tip" id="gateTip">Works best in good light, phone propped up sideways</div>
 </div>
@@ -227,7 +341,7 @@ class DribbleCounter {
     this.fallStartY = 0; this.maxY = 0;
     this.intervals = [];        // ms between dribbles (for tempo/streaks)
     this.times = [];            // timestamps of counts
-    this.streak = 0;
+    this.streak = 0; this.bestStreak = 0;
   }
   /** t ms, y px (down = larger), vy px/s, present bool, zoneY px, frameH px. Returns true when a dribble is counted. */
   update(t, y, vy, present, zoneY, frameH) {
@@ -252,6 +366,7 @@ class DribbleCounter {
         if (dropped >= minDrop && lowEnough && spaced) {
           const gap = t - this.lastCountT;
           this.streak = gap < 1500 ? this.streak + 1 : 1;
+          if (this.streak > this.bestStreak) this.bestStreak = this.streak;
           if (this.times.length) this.intervals.push(t - this.times[this.times.length - 1]);
           if (this.intervals.length > 40) this.intervals.shift();
           this.times.push(t);
@@ -268,30 +383,59 @@ class DribbleCounter {
     const n = this.times.filter(x => t - x < win).length;
     return Math.round(n * (60000 / win));
   }
-  reset() { const c = new DribbleCounter(); Object.assign(this, c); }
+  reset() { Object.assign(this, new DribbleCounter()); }
 }
 
-/** Counts a make when the ball crosses the rim line downward, inside the rim span. */
+/**
+ * Tracks shot attempts and makes. A "flight" starts when the ball gets above
+ * rim height near the hoop. Falling through the rim = make; coming back down
+ * without passing through = miss. Both count as attempts.
+ */
 class ShotCounter {
-  constructor() { this.count = 0; this.lastShotT = -1e9; this.prev = null; }
-  /** t ms, ball {x, y, vy, present}, rim {cx, cy, halfW} or null. Returns true on a make. */
+  constructor() {
+    this.makes = 0; this.attempts = 0;
+    this.lastMakeT = -1e9; this.prev = null; this.flight = null;
+  }
+  /** t ms, ball {x, y, vy, present}, rim {cx, cy, halfW} or null. Returns 'make' | 'miss' | null. */
   update(t, ball, rim) {
     const p = this.prev;
     this.prev = ball.present ? { x: ball.x, y: ball.y, t } : null;
-    if (!rim || !ball.present || !p || t - p.t > 300) return false;
-    if (t - this.lastShotT < 1800) return false;
-    if (p.y <= rim.cy && ball.y > rim.cy && ball.vy > 0) {
-      // x at the moment of crossing (linear interpolation)
+    if (!rim || !ball.present) return null;
+    if (this.flight && t - this.flight.t > 2600) this.flight = null;
+
+    const near = Math.abs(ball.x - rim.cx) < rim.halfW * 3.2;
+    const aboveRim = ball.y < rim.cy - rim.halfW * 0.5;
+    if (near && aboveRim) this.flight = { t };
+
+    /* make: crossing the rim line downward, inside the rim span */
+    if (p && t - p.t < 300 && t - this.lastMakeT > 1800 &&
+        p.y <= rim.cy && ball.y > rim.cy && ball.vy > 0) {
       const f = (rim.cy - p.y) / Math.max(ball.y - p.y, 1e-6);
       const xCross = p.x + (ball.x - p.x) * f;
       if (Math.abs(xCross - rim.cx) <= rim.halfW * 0.95) {
-        this.count++; this.lastShotT = t;
-        return true;
+        this.makes++; this.attempts++;
+        this.lastMakeT = t; this.flight = null;
+        return 'make';
       }
     }
-    return false;
+    /* miss: the ball was up near the rim but came down past it un-splashed */
+    if (this.flight && ball.y > rim.cy + rim.halfW * 1.2) {
+      this.flight = null; this.attempts++;
+      return 'miss';
+    }
+    return null;
   }
-  reset() { this.count = 0; this.lastShotT = -1e9; this.prev = null; }
+  accuracy() { return this.attempts ? Math.round(this.makes / this.attempts * 100) : 0; }
+  reset() { Object.assign(this, new ShotCounter()); }
+}
+
+/** Which hand is dribbling: closest wrist to the ball, or null when unclear. */
+function pickHand(ballX, ballY, lw, rw, maxDist) {
+  const d = w => w ? Math.hypot(w.x - ballX, w.y - ballY) : Infinity;
+  const dl = d(lw), dr = d(rw);
+  const best = Math.min(dl, dr);
+  if (best > maxDist) return null;
+  return dl < dr ? 'L' : 'R';
 }
 /* ==== PURE-LOGIC-END ==== */
 
@@ -309,14 +453,22 @@ let poseLm = null, objDet = null, stream = null;
 let lastPose = null, poseTick = 0;
 let hoop = null;               // {cx, cy, w} normalized to video dims
 let editingHoop = false;
-let soundOn = true;
+let soundOn = true, voiceOn = true;
 let sessionStart = 0;
 let particles = [];
-let rimPulse = 0;              // 0..1 celebration pulse on the rim
+let rimPulse = 0;
+let hands = { L: 0, R: 0 };
+let mode = { type: 'free', start: 0, done: false };
 
+/* ---------- persistent records ---------- */
+const REC_KEY = 'cv_records';
+let records = { bestStreak: 0, bestDpm: 0, sprint60: 0, splash5Ms: 0, totalDribbles: 0, totalMakes: 0 };
+try { Object.assign(records, JSON.parse(localStorage.getItem(REC_KEY) || '{}')); } catch {}
+function saveRecords() { try { localStorage.setItem(REC_KEY, JSON.stringify(records)); } catch {} }
 try { const s = localStorage.getItem('cv_hoop'); if (s) hoop = JSON.parse(s); } catch {}
+try { voiceOn = localStorage.getItem('cv_voice') !== '0'; } catch {}
 
-/* ---------- audio ---------- */
+/* ---------- audio + voice ---------- */
 let AC = null;
 function audio() { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; }
 function thump() {
@@ -334,6 +486,15 @@ function chime(freqs, dur = .16, type = 'triangle', vol = .25) {
     g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
     o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + .02);
   });
+}
+function say(txt) {
+  if (!voiceOn || !('speechSynthesis' in window)) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(txt);
+    u.rate = 1.06; u.pitch = 1;
+    speechSynthesis.speak(u);
+  } catch {}
 }
 
 /* ---------- geometry (video px <-> screen px, object-fit: cover) ---------- */
@@ -397,6 +558,43 @@ async function loadModels() {
   }), 'GPU');
 }
 
+/* ---------- instant replay ring buffer ---------- */
+const RB_N = 42, RB_EVERY = 3;
+const rbPool = [], rbMeta = [];
+let rbIdx = 0, rbTick = 0;
+function captureReplayFrame() {
+  if (rbTick++ % RB_EVERY !== 0) return;
+  const w = 256, h = Math.max(Math.round(w * view.h / view.w), 2);
+  let cv = rbPool[rbIdx % RB_N];
+  if (!cv || cv.width !== w || cv.height !== h) {
+    cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    rbPool[rbIdx % RB_N] = cv;
+  }
+  const c = cv.getContext('2d');
+  if (mirror) { c.save(); c.scale(-1, 1); c.drawImage(video, -w, 0, w, h); c.restore(); }
+  else c.drawImage(video, 0, 0, w, h);
+  rbMeta[rbIdx % RB_N] = performance.now();
+  rbIdx++;
+}
+let replayTimer = null;
+function showReplay() {
+  if (editingHoop || rbIdx < 8) return;
+  const frames = [];
+  for (let i = Math.max(rbIdx - RB_N, 0); i < rbIdx; i++) frames.push(rbPool[i % RB_N]);
+  const rc = $('replayCv'), c = rc.getContext('2d');
+  rc.width = frames[0].width; rc.height = frames[0].height;
+  const box = $('replayBox');
+  box.classList.add('show');
+  let f = 0, loops = 0;
+  clearInterval(replayTimer);
+  replayTimer = setInterval(() => {
+    c.drawImage(frames[f], 0, 0);
+    f++;
+    if (f >= frames.length) { f = 0; loops++; if (loops >= 2) { clearInterval(replayTimer); box.classList.remove('show'); } }
+  }, 70);   // ~half speed of capture rate = slow-mo
+}
+$('replayBox').addEventListener('pointerdown', () => { clearInterval(replayTimer); $('replayBox').classList.remove('show'); });
+
 /* ---------- main loop ---------- */
 let lastMediaT = 0;
 function loop() {
@@ -406,6 +604,8 @@ function loop() {
   const t = performance.now();
   if (t <= lastMediaT) return;
   lastMediaT = t;
+
+  captureReplayFrame();
 
   /* ball detection */
   let det = null;
@@ -437,14 +637,16 @@ function loop() {
       zoneY = Math.max(zoneY * 0.6, ((lh.y + rh.y) / 2) * view.h);
   }
 
-  if (dribbles.update(t, tracker.y, tracker.vy, present, zoneY, view.h)) {
-    onDribble();
-  }
+  if (dribbles.update(t, tracker.y, tracker.vy, present, zoneY, view.h)) onDribble();
+
   const rim = hoop ? { cx: hoop.cx * view.w, cy: hoop.cy * view.h, halfW: hoop.w * view.w / 2 } : null;
-  if (!editingHoop && shots.update(t, { x: tracker.x, y: tracker.y, vy: tracker.vy, present }, rim)) {
-    onShot();
+  if (!editingHoop) {
+    const ev = shots.update(t, { x: tracker.x, y: tracker.y, vy: tracker.vy, present }, rim);
+    if (ev === 'make') onShot();
+    else if (ev === 'miss') onMiss();
   }
 
+  checkMode(t);
   draw(t, present, rim);
   updateHud(t, present);
 }
@@ -454,9 +656,21 @@ function onDribble() {
   thump();
   pop('statDrib');
   $('dribNum').textContent = dribbles.count;
+  records.totalDribbles++;
+  if (dribbles.bestStreak > records.bestStreak) records.bestStreak = dribbles.bestStreak;
+
+  /* which hand? wrists 15 (left) & 16 (right) in video px */
+  if (lastPose) {
+    const w = i => (lastPose[i] && (lastPose[i].visibility ?? 1) > .35)
+      ? { x: lastPose[i].x * view.w, y: lastPose[i].y * view.h } : null;
+    const hnd = pickHand(tracker.x, tracker.y, w(15), w(16), view.h * .45);
+    if (hnd) { hands[hnd]++; $('handChip').style.display = ''; $('handTxt').textContent = `Left ${hands.L} · Right ${hands.R}`; }
+  }
+
   const s = dribbles.streak;
   $('streakSub').textContent = s >= 3 ? `🔥 streak ×${s}` : '';
-  if (s > 0 && s % 25 === 0) { toast(`${s} STREAK!`); chime([523, 659, 784], .12); }
+  if (s > 0 && s % 25 === 0) { toast(`${s} STREAK!`); chime([523, 659, 784], .12); say(`${s} in a row!`); }
+  else if (dribbles.count % 50 === 0) say(`${dribbles.count} dribbles`);
   const [sx, sy] = v2s(tracker.x, tracker.y);
   burst(sx, sy, 14, ['#ff7a18', '#ffb347', '#ffffff']);
   drawSpark();
@@ -464,13 +678,24 @@ function onDribble() {
 function onShot() {
   chime([784, 1046, 1318], .18);
   pop('statShot');
-  $('shotNum').textContent = shots.count;
+  $('shotNum').textContent = shots.makes;
+  records.totalMakes++;
   $('shotSub').textContent = 'wet 💦';
-  setTimeout(() => $('shotSub').textContent = '', 1600);
-  toast(['BUCKETS!', 'SPLASH!', 'COUNT IT!', 'MONEY!'][shots.count % 4]);
+  setTimeout(updateAccuracy, 1500);
+  toast(['BUCKETS!', 'SPLASH!', 'COUNT IT!', 'MONEY!'][shots.makes % 4]);
   $('flash').classList.remove('go'); void $('flash').offsetWidth; $('flash').classList.add('go');
   rimPulse = 1;
   if (hoop) { const [sx, sy] = v2s(hoop.cx * view.w, hoop.cy * view.h); burst(sx, sy, 44, ['#2de2e6', '#ffb347', '#ffffff', '#7b2ff7']); }
+  if (mode.type === 'splash5') say(`Bucket! ${shots.makes} of 5`);
+  else say('Bucket!');
+  setTimeout(showReplay, 550);
+}
+function onMiss() {
+  updateAccuracy();
+  chime([196], .12, 'sine', .12);
+}
+function updateAccuracy() {
+  $('shotSub').textContent = shots.attempts ? `${shots.accuracy()}% of ${shots.attempts}` : '';
 }
 function pop(id) { const el = $(id); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); setTimeout(() => el.classList.remove('pop'), 140); }
 function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
@@ -481,6 +706,145 @@ function burst(x, y, n, colors) {
       size: 2 + Math.random() * 4, color: colors[i % colors.length] });
   }
 }
+
+/* ---------- game modes ---------- */
+function fmtMs(ms) { return (ms / 1000).toFixed(1) + 's'; }
+function refreshRecordUI() {
+  $('recSprint').textContent = records.sprint60 ? records.sprint60 : '—';
+  $('recSplash').textContent = records.splash5Ms ? fmtMs(records.splash5Ms) : '—';
+  $('recTotals').textContent = `${records.totalDribbles} dribbles · ${records.totalMakes} buckets`;
+  $('recStreak').textContent = records.bestStreak;
+  $('voiceSwitch').classList.toggle('on', voiceOn);
+}
+function resetCounters() {
+  dribbles.reset(); shots.reset(); hands = { L: 0, R: 0 };
+  $('dribNum').textContent = '0'; $('shotNum').textContent = '0';
+  $('streakSub').textContent = ''; $('shotSub').textContent = '';
+  $('handChip').style.display = 'none';
+  sparkCtx.clearRect(0, 0, 236, 68);
+  sessionStart = performance.now();
+}
+let countTimer = null;
+function startMode(type) {
+  if (type === 'splash5' && !hoop) {
+    $('modeSheet').classList.remove('show');
+    showErr('Set the hoop first (🏀 HOOP button), then start Splash Five');
+    return;
+  }
+  $('modeSheet').classList.remove('show');
+  $('resultSheet').classList.remove('show');
+  mode = { type, start: 0, done: false };
+  if (type === 'free') { resetCounters(); return; }
+  /* 3-2-1 countdown */
+  let n = 3;
+  paused = true;
+  const cEl = $('count'), nEl = $('countNum');
+  cEl.classList.add('show'); nEl.textContent = n;
+  say(type === 'sprint60' ? 'Sixty second dribble sprint. Ready?' : 'First to five buckets. Ready?');
+  chime([440], .1);
+  clearInterval(countTimer);
+  countTimer = setInterval(() => {
+    n--;
+    if (n > 0) { nEl.textContent = n; chime([440], .1); }
+    else {
+      clearInterval(countTimer);
+      nEl.textContent = 'GO!';
+      chime([880], .25); say('Go!');
+      setTimeout(() => cEl.classList.remove('show'), 700);
+      resetCounters();
+      paused = false;
+      mode.start = performance.now();
+    }
+  }, 900);
+}
+function checkMode(t) {
+  if (!mode.start || mode.done) return;
+  if (mode.type === 'sprint60') {
+    const left = 60000 - (t - mode.start);
+    if (left <= 10500 && left > 9500) say('Ten seconds!');
+    if (left <= 0) endMode();
+  } else if (mode.type === 'splash5' && shots.makes >= 5) {
+    endMode();
+  }
+}
+function endMode() {
+  mode.done = true;
+  const t = performance.now();
+  chime([660, 880, 1100, 1320], .14);
+  let recMsg = '';
+  if (mode.type === 'sprint60') {
+    $('resTitle').innerHTML = 'Time! <em>Sprint over</em>';
+    $('resSub').textContent = '60 seconds of real dribbles';
+    if (dribbles.count > (records.sprint60 || 0)) { records.sprint60 = dribbles.count; recMsg = '🏆 NEW RECORD!'; }
+    $('resA').textContent = dribbles.count; $('resAL').textContent = 'Dribbles';
+    $('resB').textContent = dribbles.bestStreak; $('resBL').textContent = 'Best streak';
+    $('resC').textContent = `${hands.L}/${hands.R}`; $('resCL').textContent = 'Left / Right';
+    $('resD').textContent = records.sprint60; $('resDL').textContent = 'Record';
+    say(`Time! ${dribbles.count} dribbles. ${recMsg ? 'New record!' : ''}`);
+  } else {
+    const ms = t - mode.start;
+    $('resTitle').innerHTML = 'Splash! <em>Five down</em>';
+    $('resSub').textContent = 'Five buckets, timed';
+    if (!records.splash5Ms || ms < records.splash5Ms) { records.splash5Ms = ms; recMsg = '🏆 NEW RECORD!'; }
+    $('resA').textContent = fmtMs(ms); $('resAL').textContent = 'Your time';
+    $('resB').textContent = shots.accuracy() + '%'; $('resBL').textContent = 'Accuracy';
+    $('resC').textContent = shots.attempts; $('resCL').textContent = 'Attempts';
+    $('resD').textContent = fmtMs(records.splash5Ms); $('resDL').textContent = 'Record';
+    say(`Five buckets in ${(ms / 1000).toFixed(1)} seconds. ${recMsg ? 'New record!' : ''}`);
+  }
+  $('resRecord').textContent = recMsg;
+  saveRecords();
+  setTimeout(() => $('resultSheet').classList.add('show'), 800);
+}
+$('modeBtn').onclick = () => { refreshRecordUI(); $('modeSheet').classList.add('show'); };
+$('modeClose').onclick = () => $('modeSheet').classList.remove('show');
+document.querySelectorAll('.modeCard').forEach(b => b.onclick = () => startMode(b.dataset.mode));
+$('voiceSwitch').onclick = e => {
+  voiceOn = !voiceOn;
+  e.currentTarget.classList.toggle('on', voiceOn);
+  try { localStorage.setItem('cv_voice', voiceOn ? '1' : '0'); } catch {}
+  if (voiceOn) say('Voice on');
+};
+$('resAgain').onclick = () => startMode(mode.type);
+$('resFree').onclick = () => { $('resultSheet').classList.remove('show'); mode = { type: 'free', start: 0, done: false }; resetCounters(); };
+
+/* ---------- share card ---------- */
+$('resShare').onclick = async () => {
+  const cv = document.createElement('canvas'); cv.width = 1080; cv.height = 1350;
+  const c = cv.getContext('2d');
+  const bg = c.createLinearGradient(0, 0, 0, 1350);
+  bg.addColorStop(0, '#141425'); bg.addColorStop(1, '#07070b');
+  c.fillStyle = bg; c.fillRect(0, 0, 1080, 1350);
+  const glow = c.createRadialGradient(540, 200, 0, 540, 200, 700);
+  glow.addColorStop(0, 'rgba(255,122,24,.25)'); glow.addColorStop(1, 'transparent');
+  c.fillStyle = glow; c.fillRect(0, 0, 1080, 1350);
+  c.textAlign = 'center';
+  c.fillStyle = '#f4f4f8'; c.font = '900 64px Inter, sans-serif';
+  c.fillText('COURTVISION', 540, 140);
+  c.fillStyle = '#ff7a18'; c.font = '800 30px Inter, sans-serif';
+  c.fillText(new Date().toLocaleDateString(), 540, 195);
+  const rows = mode.type === 'splash5'
+    ? [[$('resA').textContent, 'FIVE BUCKETS IN'], [$('resB').textContent, 'ACCURACY'], [$('resC').textContent, 'ATTEMPTS']]
+    : [[String(dribbles.count), 'REAL DRIBBLES'], [String(dribbles.bestStreak), 'BEST STREAK'], [String(shots.makes), 'BUCKETS']];
+  rows.forEach(([n, l], i) => {
+    const y = 420 + i * 300;
+    c.fillStyle = '#ffffff'; c.font = '900 170px Inter, sans-serif';
+    c.fillText(n, 540, y);
+    c.fillStyle = '#9a9aad'; c.font = '800 34px Inter, sans-serif';
+    c.fillText(l, 540, y + 60);
+  });
+  c.fillStyle = '#5b5b6e'; c.font = '600 26px Inter, sans-serif';
+  c.fillText('tracked live by the camera — no fake stats 🏀', 540, 1290);
+  cv.toBlob(async blob => {
+    const file = new File([blob], 'courtvision.png', { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'CourtVision session' }); return; } catch {}
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'courtvision.png'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }, 'image/png');
+};
 
 /* ---------- drawing ---------- */
 const BONES = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],
@@ -505,7 +869,6 @@ function draw(t, ballPresent, rim) {
       ctx.moveTo(P[a][0], P[a][1]); ctx.lineTo(P[b][0], P[b][1]);
     }
     ctx.stroke();
-    /* head */
     if ((lastPose[0]?.visibility ?? 1) > .35) {
       const [hx, hy] = P[0];
       const r = Math.max(Math.hypot(P[7][0] - P[8][0], P[7][1] - P[8][1]) * .62, 10);
@@ -552,7 +915,6 @@ function draw(t, ballPresent, rim) {
     ctx.lineWidth = 4; if (editingHoop) ctx.setLineDash([8, 7]);
     ctx.beginPath(); ctx.ellipse(hx, hy, hw * (1 + rimPulse * .18), hw * .32 * (1 + rimPulse * .18), 0, 0, Math.PI * 2); ctx.stroke();
     ctx.setLineDash([]);
-    /* net */
     ctx.shadowBlur = 0; ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,255,255,.5)';
     const netH = hw * 1.15, seg = 6;
     ctx.beginPath();
@@ -610,9 +972,23 @@ function updateHud(t, present) {
   $('ballChip').textContent = present ? 'Ball locked' : 'Ball: searching…';
   $('hoopDot').className = 'dot ' + (hoop ? 'on' : '');
   $('hoopChip').textContent = hoop ? 'Hoop set — shots armed' : 'Hoop: tap 🏀 HOOP to set';
-  $('dpmNum').textContent = dribbles.perMinute(t);
-  const s = Math.floor((t - sessionStart) / 1000);
-  $('timeSub').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  const dpm = dribbles.perMinute(t);
+  $('dpmNum').textContent = dpm;
+  if (dpm > (records.bestDpm || 0)) records.bestDpm = dpm;
+  const timeEl = $('timeSub');
+  if (mode.type === 'sprint60' && mode.start && !mode.done) {
+    const left = Math.max(Math.ceil((60000 - (t - mode.start)) / 1000), 0);
+    timeEl.textContent = `⏱ ${left}s left`;
+    timeEl.classList.toggle('urgent', left <= 10);
+  } else if (mode.type === 'splash5' && mode.start && !mode.done) {
+    timeEl.textContent = `⏱ ${((t - mode.start) / 1000).toFixed(1)}s · ${shots.makes}/5`;
+    timeEl.classList.remove('urgent');
+  } else {
+    const s = Math.floor((t - sessionStart) / 1000);
+    timeEl.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    timeEl.classList.remove('urgent');
+  }
+  if (hudTick % 300 === 0) saveRecords();
 }
 
 /* ---------- hoop editing ---------- */
@@ -636,7 +1012,7 @@ $('hoopAuto').onclick = () => {
 let dragging = false;
 canvas.style.pointerEvents = 'none';
 document.addEventListener('pointerdown', e => {
-  if (!editingHoop || e.target.closest('.btn,.mini,#hoopBar')) return;
+  if (!editingHoop || e.target.closest('.btn,.mini,#hoopBar,.sheet')) return;
   dragging = true; moveHoop(e);
 });
 document.addEventListener('pointermove', e => { if (dragging) moveHoop(e); });
@@ -667,7 +1043,6 @@ function scanForHoop() {
     }
   }
   if (pts.length < 18) return null;
-  /* densest horizontal cluster */
   pts.sort((a, b) => a[1] - b[1]);
   let best = null;
   for (let s = 0; s < pts.length; s++) {
@@ -700,10 +1075,9 @@ $('soundBtn').onclick = e => {
   e.currentTarget.querySelector('span').textContent = soundOn ? 'Sound' : 'Muted';
 };
 $('resetBtn').onclick = () => {
-  dribbles.reset(); shots.reset();
-  $('dribNum').textContent = '0'; $('shotNum').textContent = '0';
-  $('streakSub').textContent = ''; sessionStart = performance.now();
-  sparkCtx.clearRect(0, 0, 236, 68);
+  mode = { type: 'free', start: 0, done: false };
+  resetCounters();
+  saveRecords();
 };
 function showErr(msg) { const el = $('err'); el.textContent = msg; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 5000); }
 
@@ -729,6 +1103,7 @@ $('startBtn').onclick = async () => {
   $('gate').classList.add('hide');
   running = true; sessionStart = performance.now();
   try { navigator.wakeLock?.request('screen').catch(() => {}); } catch {}
+  say('Court vision ready. Let’s hoop.');
   requestAnimationFrame(loop);
 };
 </script>

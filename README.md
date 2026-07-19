@@ -13,10 +13,15 @@ browser and tracks, live:
 - **Buckets** — when the ball passes down through the pinned rim: counter,
   particle burst, swish sound, and a slow-mo **instant replay**. Rim-area misses
   are tracked too, so you get **attempts and shooting accuracy %**.
-- **Game modes** — ⚡ *Dribble Sprint* (most real dribbles in 60 s) and
-  💦 *Splash Five* (race the clock to 5 makes), with 3-2-1 countdowns, a
-  **voice announcer**, personal **records** saved on-device, and a shareable
-  session stat card.
+- **Game modes** — ⚡ *Dribble Sprint* (most real dribbles in 60 s),
+  💦 *Splash Five* (race the clock to 5 makes) and 🔥 *Hot Hand* (keep making
+  shots until you miss), with 3-2-1 countdowns, a **voice announcer**,
+  personal **records** saved on-device, and a shareable session stat card.
+- **Extras** — shot **arc traces** (green = make, red = miss), miss feedback
+  ("off left / off right / rimmed out"), **crossover counting**, real-world
+  **ball speed in km/h** (scaled off the ball's known size), an NBA-Jam-style
+  **on-fire mode** at 10+ and 20+ dribble streaks, live event ticker, and
+  haptic buzzes on phones.
 
 Everything runs on-device. No video is uploaded anywhere.
 

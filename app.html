@@ -9,9 +9,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#07070b; --panel:rgba(16,16,26,.55); --line:rgba(255,255,255,.08);
+    --bg:#07070b; --panel:rgba(14,14,24,.6); --line:rgba(255,255,255,.09);
     --orange:#ff7a18; --orange2:#ffb347; --cyan:#2de2e6; --violet:#7b2ff7;
-    --good:#3dffa0; --text:#f4f4f8; --dim:#9a9aad;
+    --good:#3dffa0; --bad:#ff5d5d; --text:#f4f4f8; --dim:#9a9aad;
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
@@ -21,25 +21,47 @@
   #cam.mirror{transform:scaleX(-1)}
   #overlay{position:absolute;inset:0;width:100%;height:100%}
 
-  /* ---------- HUD ---------- */
-  .hud-top{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;gap:10px;
-    padding:calc(10px + env(safe-area-inset-top)) 12px 10px;z-index:20;pointer-events:none}
-  .stat{min-width:100px;text-align:center;padding:10px 12px;border-radius:18px;
-    background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-    border:1px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.35);position:relative;overflow:hidden}
-  .stat::before{content:"";position:absolute;inset:0;border-radius:18px;padding:1px;
-    background:linear-gradient(135deg,rgba(255,122,24,.6),transparent 40%,transparent 60%,rgba(45,226,230,.5));
+  /* ---------- on-fire border glow ---------- */
+  #fireGlow{position:fixed;inset:0;pointer-events:none;z-index:14;opacity:0;transition:opacity .6s;
+    box-shadow:inset 0 0 90px rgba(255,90,0,.5),inset 0 0 200px rgba(255,60,0,.25)}
+  #fireGlow.l1{opacity:.55}
+  #fireGlow.l2{opacity:1;animation:firePulse 1.1s ease-in-out infinite}
+  @keyframes firePulse{50%{box-shadow:inset 0 0 130px rgba(255,110,0,.75),inset 0 0 260px rgba(255,60,0,.4)}}
+
+  /* ---------- HUD top ---------- */
+  .hud-top{position:fixed;top:0;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;
+    padding:calc(10px + env(safe-area-inset-top)) 12px 0;z-index:20;pointer-events:none}
+  .statRow{display:flex;justify-content:center;gap:10px}
+  .stat{min-width:102px;text-align:center;padding:10px 12px 9px;border-radius:20px;
+    background:var(--panel);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.4);position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;inset:0;border-radius:20px;padding:1px;
+    background:linear-gradient(135deg,rgba(255,122,24,.65),transparent 40%,transparent 60%,rgba(45,226,230,.55));
     -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
     -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+  .stat::after{content:"";position:absolute;top:0;left:-70%;width:50%;height:100%;transform:skewX(-22deg);
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.09),transparent);animation:cardSheen 5s 1s infinite}
+  @keyframes cardSheen{0%{left:-70%}30%{left:130%}100%{left:130%}}
   .stat .num{font-family:Anton,Impact,sans-serif;font-size:clamp(30px,8vw,44px);line-height:1;
     letter-spacing:.02em;background:linear-gradient(180deg,#fff,#ffd9b0);
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
     transition:transform .12s ease}
-  .stat.pop .num{transform:scale(1.28)}
+  .stat.pop .num{transform:scale(1.3)}
   .stat .lbl{font-size:10px;font-weight:800;letter-spacing:.22em;color:var(--dim);margin-top:4px;text-transform:uppercase}
-  .stat .sub{font-size:10px;font-weight:600;color:var(--orange2);height:12px;margin-top:2px}
-  .stat .sub.urgent{color:#ff5d5d;animation:blink 1s infinite}
+  .stat .sub{font-size:10px;font-weight:700;color:var(--orange2);height:13px;margin-top:2px}
+  .stat .sub.urgent{color:var(--bad);animation:blink 1s infinite}
+  #comboBar{position:absolute;bottom:0;left:0;height:3px;width:0%;border-radius:3px;
+    background:linear-gradient(90deg,var(--orange),#ff3b00);transition:width .25s;box-shadow:0 0 8px rgba(255,90,0,.8)}
 
+  #ticker{min-height:24px;pointer-events:none}
+  #ticker span{display:inline-block;padding:5px 14px;border-radius:999px;font-size:12px;font-weight:800;
+    letter-spacing:.06em;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);opacity:0;transform:translateY(-8px)}
+  #ticker span.show{animation:tickIn 2.6s cubic-bezier(.2,1,.3,1) forwards}
+  @keyframes tickIn{0%{opacity:0;transform:translateY(-10px) scale(.9)}12%{opacity:1;transform:none}
+    80%{opacity:1}100%{opacity:0;transform:translateY(6px)}}
+
+  /* ---------- HUD side ---------- */
   .hud-mid{position:fixed;left:12px;top:50%;transform:translateY(-50%);z-index:20;display:flex;
     flex-direction:column;gap:8px;pointer-events:none}
   .chip{font-size:11px;font-weight:600;padding:7px 11px;border-radius:999px;background:var(--panel);
@@ -51,18 +73,20 @@
   @keyframes blink{50%{opacity:.35}}
   #spark{width:118px;height:34px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
 
-  .hud-bot{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;gap:8px;
-    padding:12px 8px calc(14px + env(safe-area-inset-bottom));z-index:20}
-  .btn{pointer-events:auto;border:1px solid var(--line);background:var(--panel);color:var(--dim);
-    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:16px;
+  /* ---------- HUD dock ---------- */
+  .hud-bot{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;z-index:20;
+    padding:0 10px calc(12px + env(safe-area-inset-bottom))}
+  #dock{display:flex;gap:2px;padding:8px;border-radius:26px;background:rgba(12,12,22,.66);
+    border:1px solid var(--line);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    box-shadow:0 14px 44px rgba(0,0,0,.55)}
+  .btn{pointer-events:auto;border:none;background:transparent;color:var(--dim);border-radius:18px;
     min-width:52px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
     font-family:inherit;font-size:9px;font-weight:800;letter-spacing:.1em;cursor:pointer;
-    transition:transform .12s,background .2s;text-transform:uppercase;flex:0 1 auto;padding:0 8px}
-  .btn svg{width:21px;height:21px;fill:none;stroke:var(--text);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  .btn:active{transform:scale(.92)}
-  .btn.accent{background:linear-gradient(135deg,rgba(255,122,24,.25),rgba(123,47,247,.2));border-color:rgba(255,122,24,.45)}
-  .btn.active{border-color:var(--cyan);color:var(--cyan)}
-  .btn.active svg{stroke:var(--cyan)}
+    transition:transform .12s,background .2s,color .2s;text-transform:uppercase;padding:0 9px}
+  .btn svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .btn:active{transform:scale(.9)}
+  .btn.accent{color:var(--orange2)}
+  .btn.active{color:var(--cyan);background:rgba(45,226,230,.1)}
 
   /* ---------- start screen ---------- */
   #gate{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -89,7 +113,7 @@
   #gate .tip{font-size:11px;color:#6d6d80;letter-spacing:.06em}
 
   /* ---------- hoop edit ---------- */
-  #hoopBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom));
+  #hoopBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom));
     z-index:25;display:none;flex-direction:column;gap:10px;align-items:center;
     background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:14px 18px;
     backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 10px 40px rgba(0,0,0,.5)}
@@ -101,12 +125,12 @@
     padding:9px 14px;font-size:11px;font-weight:800;letter-spacing:.1em;cursor:pointer;text-transform:uppercase}
   .mini.accent{background:linear-gradient(90deg,var(--orange),var(--orange2));color:#120800;border:none}
 
-  /* ---------- sheets (mode picker / results) ---------- */
+  /* ---------- sheets ---------- */
   .sheet{position:fixed;inset:0;z-index:45;display:none;align-items:flex-end;justify-content:center;
     background:rgba(4,4,8,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
   .sheet.show{display:flex}
   .sheet .panel{width:min(560px,100%);max-height:86vh;overflow:auto;border-radius:26px 26px 0 0;
-    background:rgba(14,14,24,.96);border:1px solid var(--line);border-bottom:none;
+    background:rgba(14,14,24,.97);border:1px solid var(--line);border-bottom:none;
     padding:24px 20px calc(24px + env(safe-area-inset-bottom));animation:slideup .35s cubic-bezier(.16,1,.3,1)}
   @keyframes slideup{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
   .sheet h2{font-family:Anton,Impact,sans-serif;font-size:26px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}
@@ -155,7 +179,7 @@
     pointer-events:none;border-radius:22px;overflow:hidden;border:1px solid rgba(255,122,24,.5);
     box-shadow:0 0 60px rgba(255,122,24,.35),0 30px 80px rgba(0,0,0,.7);background:#000;
     transition:opacity .3s,transform .3s}
-  #replayBox.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  #replayBox.show{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
   #replayCv{display:block;width:min(74vw,420px)}
   #replayBox .tag{position:absolute;top:10px;left:12px;display:flex;align-items:center;gap:7px;
     font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:#fff;
@@ -180,7 +204,7 @@
     opacity:0;pointer-events:none;z-index:15}
   #flash.go{animation:flash .5s ease-out}
   @keyframes flash{0%{opacity:1}100%{opacity:0}}
-  #err{position:fixed;top:calc(84px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:50;
+  #err{position:fixed;top:calc(96px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:50;
     background:rgba(180,40,40,.92);padding:10px 18px;border-radius:14px;font-size:13px;display:none;max-width:88vw}
 </style>
 </head>
@@ -189,28 +213,34 @@
   <video id="cam" autoplay muted playsinline></video>
   <canvas id="overlay"></canvas>
 </div>
+<div id="fireGlow"></div>
 
 <div class="hud-top">
-  <div class="stat" id="statDrib"><div class="num" id="dribNum">0</div><div class="lbl">Dribbles</div><div class="sub" id="streakSub"></div></div>
-  <div class="stat" id="statShot"><div class="num" id="shotNum">0</div><div class="lbl">Buckets</div><div class="sub" id="shotSub"></div></div>
-  <div class="stat"><div class="num" id="dpmNum">0</div><div class="lbl">Per Min</div><div class="sub" id="timeSub">0:00</div></div>
+  <div class="statRow">
+    <div class="stat" id="statDrib"><div class="num" id="dribNum">0</div><div class="lbl">Dribbles</div>
+      <div class="sub" id="streakSub"></div><div id="comboBar"></div></div>
+    <div class="stat" id="statShot"><div class="num" id="shotNum">0</div><div class="lbl">Buckets</div><div class="sub" id="shotSub"></div></div>
+    <div class="stat"><div class="num" id="dpmNum">0</div><div class="lbl">Per Min</div><div class="sub" id="timeSub">0:00</div></div>
+  </div>
+  <div id="ticker"><span id="tickerTxt"></span></div>
 </div>
 
 <div class="hud-mid">
   <div class="chip"><span class="dot" id="ballDot"></span><span id="ballChip">Ball: searching…</span></div>
   <div class="chip"><span class="dot" id="hoopDot"></span><span id="hoopChip">Hoop: not set</span></div>
   <div class="chip" id="handChip" style="display:none">🖐 <span id="handTxt"></span></div>
+  <div class="chip" id="speedChip" style="display:none">⚡ <span id="speedTxt"></span></div>
   <canvas id="spark" width="236" height="68"></canvas>
 </div>
 
-<div class="hud-bot">
+<div class="hud-bot"><div id="dock">
   <button class="btn" id="pauseBtn"><svg viewBox="0 0 24 24"><path id="pauseIcon" d="M8 5v14M16 5v14"/></svg><span id="pauseLbl">Pause</span></button>
   <button class="btn" id="flipBtn"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4zM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M17 3l2 2-2 2"/></svg><span>Flip</span></button>
   <button class="btn accent" id="hoopBtn"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="8" rx="1"/><path d="M8 12l1.5 6M16 12l-1.5 6M9 12l3 6M15 12l-3 6M8 15h8"/></svg><span>Hoop</span></button>
   <button class="btn accent" id="modeBtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2.5"/></svg><span>Modes</span></button>
   <button class="btn" id="soundBtn"><svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6l-5 4H4zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg><span>Sound</span></button>
   <button class="btn" id="resetBtn"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg><span>Reset</span></button>
-</div>
+</div></div>
 
 <div id="hoopBar">
   <div class="hint" id="hoopHint">Drag on screen to place the rim</div>
@@ -235,9 +265,12 @@
     <button class="modeCard" data-mode="splash5"><span class="ico">💦</span>
       <span><b>Splash Five</b><span>Race the clock to sink 5 buckets. Needs the hoop set.</span></span>
       <span class="rec">Fastest<br><b id="recSplash">—</b></span></button>
+    <button class="modeCard" data-mode="hothand"><span class="ico">🔥</span>
+      <span><b>Hot Hand</b><span>Keep making shots — one miss and it's over. Needs the hoop set.</span></span>
+      <span class="rec">Best run<br><b id="recHot">—</b></span></button>
     <div class="switchRow"><span>🎙 Voice announcer</span><div class="switch" id="voiceSwitch"></div></div>
     <div class="switchRow" style="color:var(--dim);font-weight:400;font-size:11px">
-      <span>All-time: <b id="recTotals" style="color:var(--text)">0 dribbles · 0 buckets</b> · best streak <b id="recStreak" style="color:var(--text)">0</b></span>
+      <span>All-time: <b id="recTotals" style="color:var(--text)">0 dribbles · 0 buckets</b> · best streak <b id="recStreak" style="color:var(--text)">0</b> · fastest ball <b id="recSpeed" style="color:var(--text)">—</b></span>
     </div>
     <div class="sheetBtns"><button class="mini" id="modeClose">Close</button></div>
   </div>
@@ -304,13 +337,13 @@ class BallTracker {
         this.vx = 0; this.vy = 0;
       } else {
         const dt = Math.max(gap, 1) / 1000;
-        const nx = this.x + (det.cx - this.x) * 0.55;
-        const ny = this.y + (det.cy - this.y) * 0.55;
+        const nx = this.x + (det.cx - this.x) * 0.7;   // snappy: light smoothing only
+        const ny = this.y + (det.cy - this.y) * 0.7;
         const ivx = (nx - this.x) / dt, ivy = (ny - this.y) / dt;
-        this.vx += (ivx - this.vx) * 0.45;
-        this.vy += (ivy - this.vy) * 0.45;
+        this.vx += (ivx - this.vx) * 0.5;
+        this.vy += (ivy - this.vy) * 0.5;
         this.x = nx; this.y = ny;
-        this.r += (det.r - this.r) * 0.3;
+        this.r += (det.r - this.r) * 0.35;
       }
       this.lastSeen = t; this.lastT = t;
       this.trail.push({ x: this.x, y: this.y, t });
@@ -324,6 +357,8 @@ class BallTracker {
     while (this.trail.length && t - this.trail[0].t > 550) this.trail.shift();
     return this.present(t);
   }
+  /** Predicted position dtMs ahead, for matching new detections. */
+  predict(dtMs) { return { x: this.x + this.vx * dtMs / 1000, y: this.y + this.vy * dtMs / 1000 }; }
   present(t) { return t - this.lastSeen < 300; }
 }
 
@@ -389,14 +424,15 @@ class DribbleCounter {
 /**
  * Tracks shot attempts and makes. A "flight" starts when the ball gets above
  * rim height near the hoop. Falling through the rim = make; coming back down
- * without passing through = miss. Both count as attempts.
+ * without passing through = miss (with horizontal error for feedback).
  */
 class ShotCounter {
   constructor() {
     this.makes = 0; this.attempts = 0;
     this.lastMakeT = -1e9; this.prev = null; this.flight = null;
   }
-  /** t ms, ball {x, y, vy, present}, rim {cx, cy, halfW} or null. Returns 'make' | 'miss' | null. */
+  /** t ms, ball {x, y, vy, present}, rim {cx, cy, halfW} or null.
+   *  Returns null | {type:'make'} | {type:'miss', dx} (dx = horizontal error in px, video coords). */
   update(t, ball, rim) {
     const p = this.prev;
     this.prev = ball.present ? { x: ball.x, y: ball.y, t } : null;
@@ -415,13 +451,13 @@ class ShotCounter {
       if (Math.abs(xCross - rim.cx) <= rim.halfW * 0.95) {
         this.makes++; this.attempts++;
         this.lastMakeT = t; this.flight = null;
-        return 'make';
+        return { type: 'make' };
       }
     }
     /* miss: the ball was up near the rim but came down past it un-splashed */
     if (this.flight && ball.y > rim.cy + rim.halfW * 1.2) {
       this.flight = null; this.attempts++;
-      return 'miss';
+      return { type: 'miss', dx: ball.x - rim.cx };
     }
     return null;
   }
@@ -442,6 +478,14 @@ function pickHand(ballX, ballY, lw, rw, maxDist) {
 /* ---------- DOM ---------- */
 const $ = id => document.getElementById(id);
 const video = $('cam'), canvas = $('overlay'), ctx = canvas.getContext('2d');
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r);
+    this.arcTo(x + w, y + h, x, y + h, r); this.arcTo(x, y + h, x, y, r);
+    this.arcTo(x, y, x + w, y, r);
+  };
+}
 const sparkCv = $('spark'), sparkCtx = sparkCv.getContext('2d');
 
 const tracker = new BallTracker();
@@ -450,25 +494,32 @@ const shots = new ShotCounter();
 
 let running = false, paused = false, facing = 'environment', mirror = false;
 let poseLm = null, objDet = null, stream = null;
-let lastPose = null, poseTick = 0;
+let lastPose = null;
 let hoop = null;               // {cx, cy, w} normalized to video dims
 let editingHoop = false;
 let soundOn = true, voiceOn = true;
 let sessionStart = 0;
 let particles = [];
 let rimPulse = 0;
-let hands = { L: 0, R: 0 };
+let hands = { L: 0, R: 0, X: 0 };
+let prevHand = null, prevHandT = 0;
 let mode = { type: 'free', start: 0, done: false };
+let makeStreak = 0;
+let fireLevel = 0;
+let maxKmh = 0;
+let arcBuf = [], arcFx = [];
+let loopMs = 33, poseEvery = 1, frameNo = 0;
 
 /* ---------- persistent records ---------- */
 const REC_KEY = 'cv_records';
-let records = { bestStreak: 0, bestDpm: 0, sprint60: 0, splash5Ms: 0, totalDribbles: 0, totalMakes: 0 };
+let records = { bestStreak: 0, bestDpm: 0, sprint60: 0, splash5Ms: 0, hotHand: 0,
+  maxKmh: 0, totalDribbles: 0, totalMakes: 0 };
 try { Object.assign(records, JSON.parse(localStorage.getItem(REC_KEY) || '{}')); } catch {}
 function saveRecords() { try { localStorage.setItem(REC_KEY, JSON.stringify(records)); } catch {} }
 try { const s = localStorage.getItem('cv_hoop'); if (s) hoop = JSON.parse(s); } catch {}
 try { voiceOn = localStorage.getItem('cv_voice') !== '0'; } catch {}
 
-/* ---------- audio + voice ---------- */
+/* ---------- audio + voice + haptics ---------- */
 let AC = null;
 function audio() { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; }
 function thump() {
@@ -496,6 +547,7 @@ function say(txt) {
     speechSynthesis.speak(u);
   } catch {}
 }
+function vib(p) { try { navigator.vibrate?.(p); } catch {} }
 
 /* ---------- geometry (video px <-> screen px, object-fit: cover) ---------- */
 let view = { scale: 1, ox: 0, oy: 0, w: 0, h: 0 };
@@ -525,7 +577,7 @@ async function startCamera() {
   if (stream) stream.getTracks().forEach(tr => tr.stop());
   stream = await navigator.mediaDevices.getUserMedia({
     audio: false,
-    video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }
+    video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
   });
   video.srcObject = stream;
   mirror = facing === 'user';
@@ -553,9 +605,54 @@ async function loadModels() {
   }), 'GPU');
   objDet = await mk(d => ObjectDetector.createFromOptions(vision, {
     baseOptions: { modelAssetPath: DET_MODEL, delegate: d },
-    runningMode: 'VIDEO', scoreThreshold: 0.3, maxResults: 4,
+    runningMode: 'VIDEO', scoreThreshold: 0.26, maxResults: 6,
     categoryAllowlist: ['sports ball']
   }), 'GPU');
+}
+
+/* ---------- ball candidate selection: prefer the detection that matches physics ---------- */
+function pickBallDetection(detections, t) {
+  let best = null;
+  const recent = tracker.present(t);
+  const pred = recent ? tracker.predict(t - tracker.lastT) : null;
+  for (const d of detections || []) {
+    const sc = d.categories?.[0]?.score || 0;
+    if (sc < 0.28) continue;
+    const b = d.boundingBox;
+    const r = Math.max(b.width, b.height) / 2;
+    if (r < view.h * 0.012 || r > view.h * 0.28) continue;                 // absurd sizes
+    const ar = b.width / Math.max(b.height, 1);
+    if (ar < 0.45 || ar > 2.2) continue;                                   // not ball-shaped
+    const cx = b.originX + b.width / 2, cy = b.originY + b.height / 2;
+    let fit = sc;
+    if (pred) fit -= Math.hypot(cx - pred.x, cy - pred.y) / view.h * 0.9;  // stay with OUR ball
+    if (!best || fit > best.fit) best = { fit, cx, cy, r };
+  }
+  return best ? { cx: best.cx, cy: best.cy, r: best.r } : null;
+}
+
+/* ---------- color-assist: bridge detector misses with a quick orange-blob search ---------- */
+const assistCv = document.createElement('canvas');
+const assistCtx = assistCv.getContext('2d', { willReadFrequently: true });
+function colorAssist(t) {
+  if (tracker.lastSeen < 0 || t - tracker.lastSeen > 550) return null;
+  const p = tracker.predict(t - tracker.lastT);
+  const r = Math.max(tracker.r, view.h * 0.02);
+  const win = r * 3.2;
+  const sx = Math.max(p.x - win, 0), sy = Math.max(p.y - win, 0);
+  const sw = Math.min(win * 2, view.w - sx), sh = Math.min(win * 2, view.h - sy);
+  if (sw < 8 || sh < 8) return null;
+  const N = 48;
+  assistCv.width = N; assistCv.height = N;
+  try { assistCtx.drawImage(video, sx, sy, sw, sh, 0, 0, N, N); } catch { return null; }
+  const px = assistCtx.getImageData(0, 0, N, N).data;
+  let cnt = 0, mx = 0, my = 0;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = (y * N + x) * 4, R = px[i], G = px[i + 1], B = px[i + 2];
+    if (R > 70 && R > G + 18 && R > B + 32 && G > B - 22) { cnt++; mx += x; my += y; }
+  }
+  if (cnt < 14) return null;
+  return { cx: sx + (mx / cnt / N) * sw, cy: sy + (my / cnt / N) * sh, r: tracker.r };
 }
 
 /* ---------- instant replay ring buffer ---------- */
@@ -603,28 +700,38 @@ function loop() {
   if (paused || video.readyState < 2) return;
   const t = performance.now();
   if (t <= lastMediaT) return;
+  loopMs += (Math.min(t - lastMediaT, 200) - loopMs) * 0.08;
+  poseEvery = loopMs > 55 ? 2 : 1;          // adapt on slow devices, full speed elsewhere
   lastMediaT = t;
+  frameNo++;
 
   captureReplayFrame();
 
-  /* ball detection */
+  /* ball: detector first, color-assist bridges the gaps */
   let det = null;
   if (objDet) {
     const res = objDet.detectForVideo(video, t);
-    let best = null;
-    for (const d of res.detections || []) {
-      const sc = d.categories?.[0]?.score || 0;
-      if (!best || sc > best.sc) best = { sc, bb: d.boundingBox };
-    }
-    if (best && best.sc >= 0.32) {
-      const b = best.bb;
-      det = { cx: b.originX + b.width / 2, cy: b.originY + b.height / 2, r: Math.max(b.width, b.height) / 2 };
+    det = pickBallDetection(res.detections, t);
+  }
+  if (!det) det = colorAssist(t);
+  const present = tracker.update(det, t);
+  if (present) {
+    arcBuf.push({ x: tracker.x, y: tracker.y, t });
+    while (arcBuf.length && t - arcBuf[0].t > 1600) arcBuf.shift();
+    /* real-world ball speed: ball radius ≈ 12 cm gives us the scale */
+    if (tracker.r > view.h * 0.02) {
+      const kmh = Math.hypot(tracker.vx, tracker.vy) * (0.12 / tracker.r) * 3.6;
+      if (kmh < 70 && kmh > maxKmh) {
+        maxKmh = kmh;
+        if (maxKmh > (records.maxKmh || 0)) records.maxKmh = maxKmh;
+        $('speedChip').style.display = '';
+        $('speedTxt').textContent = `max ${maxKmh.toFixed(0)} km/h`;
+      }
     }
   }
-  const present = tracker.update(det, t);
 
-  /* pose every other frame */
-  if (poseLm && (poseTick++ % 2 === 0)) {
+  /* pose every frame (or every 2nd when the device is struggling) */
+  if (poseLm && frameNo % poseEvery === 0) {
     const pr = poseLm.detectForVideo(video, t + 0.01);
     lastPose = (pr.landmarks && pr.landmarks[0]) || null;
   }
@@ -637,13 +744,17 @@ function loop() {
       zoneY = Math.max(zoneY * 0.6, ((lh.y + rh.y) / 2) * view.h);
   }
 
-  if (dribbles.update(t, tracker.y, tracker.vy, present, zoneY, view.h)) onDribble();
+  if (dribbles.update(t, tracker.y, tracker.vy, present, zoneY, view.h)) onDribble(t);
+  updateFire(t);
 
   const rim = hoop ? { cx: hoop.cx * view.w, cy: hoop.cy * view.h, halfW: hoop.w * view.w / 2 } : null;
   if (!editingHoop) {
     const ev = shots.update(t, { x: tracker.x, y: tracker.y, vy: tracker.vy, present }, rim);
-    if (ev === 'make') onShot();
-    else if (ev === 'miss') onMiss();
+    if (ev) {
+      snapshotArc(t, ev.type);
+      if (ev.type === 'make') onShot();
+      else onMiss(ev);
+    }
   }
 
   checkMode(t);
@@ -651,9 +762,26 @@ function loop() {
   updateHud(t, present);
 }
 
+/* ---------- fire / combo system ---------- */
+function updateFire(t) {
+  const active = t - dribbles.lastCountT < 2000;
+  const s = active ? dribbles.streak : 0;
+  const lvl = s >= 20 ? 2 : s >= 10 ? 1 : 0;
+  $('comboBar').style.width = Math.min((active ? (s % 10) / 10 : 0) * 100 + (lvl > 0 ? 100 : 0), 100) + '%';
+  if (lvl !== fireLevel) {
+    if (lvl > fireLevel) {
+      if (lvl === 1) { ticker('🔥 Heating up'); say('Heating up!'); }
+      if (lvl === 2) { ticker('🔥🔥 ON FIRE'); toast('ON FIRE!'); say("He's on fire!"); chime([659, 784, 988], .13); }
+    }
+    fireLevel = lvl;
+    $('fireGlow').className = lvl === 2 ? 'l2' : lvl === 1 ? 'l1' : '';
+    $('fireGlow').id = 'fireGlow';
+  }
+}
+
 /* ---------- events on counts ---------- */
-function onDribble() {
-  thump();
+function onDribble(t) {
+  thump(); vib(12);
   pop('statDrib');
   $('dribNum').textContent = dribbles.count;
   records.totalDribbles++;
@@ -664,11 +792,20 @@ function onDribble() {
     const w = i => (lastPose[i] && (lastPose[i].visibility ?? 1) > .35)
       ? { x: lastPose[i].x * view.w, y: lastPose[i].y * view.h } : null;
     const hnd = pickHand(tracker.x, tracker.y, w(15), w(16), view.h * .45);
-    if (hnd) { hands[hnd]++; $('handChip').style.display = ''; $('handTxt').textContent = `Left ${hands.L} · Right ${hands.R}`; }
+    if (hnd) {
+      hands[hnd]++;
+      if (prevHand && hnd !== prevHand && t - prevHandT < 2000) {
+        hands.X++;
+        if (hands.X % 10 === 0) ticker(`🔀 ${hands.X} crossovers`);
+      }
+      prevHand = hnd; prevHandT = t;
+      $('handChip').style.display = '';
+      $('handTxt').textContent = `L ${hands.L} · R ${hands.R} · ✕ ${hands.X}`;
+    }
   }
 
   const s = dribbles.streak;
-  $('streakSub').textContent = s >= 3 ? `🔥 streak ×${s}` : '';
+  $('streakSub').textContent = s >= 3 ? `🔥 ×${s}` : '';
   if (s > 0 && s % 25 === 0) { toast(`${s} STREAK!`); chime([523, 659, 784], .12); say(`${s} in a row!`); }
   else if (dribbles.count % 50 === 0) say(`${dribbles.count} dribbles`);
   const [sx, sy] = v2s(tracker.x, tracker.y);
@@ -676,29 +813,39 @@ function onDribble() {
   drawSpark();
 }
 function onShot() {
-  chime([784, 1046, 1318], .18);
+  chime([784, 1046, 1318], .18); vib([30, 40, 60]);
   pop('statShot');
   $('shotNum').textContent = shots.makes;
   records.totalMakes++;
+  makeStreak++;
+  if (makeStreak > (records.hotHand || 0)) records.hotHand = makeStreak;
   $('shotSub').textContent = 'wet 💦';
   setTimeout(updateAccuracy, 1500);
   toast(['BUCKETS!', 'SPLASH!', 'COUNT IT!', 'MONEY!'][shots.makes % 4]);
+  if (makeStreak >= 3) ticker(`💦 ${makeStreak} makes in a row`);
   $('flash').classList.remove('go'); void $('flash').offsetWidth; $('flash').classList.add('go');
   rimPulse = 1;
   if (hoop) { const [sx, sy] = v2s(hoop.cx * view.w, hoop.cy * view.h); burst(sx, sy, 44, ['#2de2e6', '#ffb347', '#ffffff', '#7b2ff7']); }
   if (mode.type === 'splash5') say(`Bucket! ${shots.makes} of 5`);
+  else if (mode.type === 'hothand') say(`${makeStreak} straight!`);
   else say('Bucket!');
   setTimeout(showReplay, 550);
 }
-function onMiss() {
+function onMiss(ev) {
   updateAccuracy();
-  chime([196], .12, 'sine', .12);
+  chime([196], .12, 'sine', .12); vib(8);
+  makeStreak = 0;
+  const rimW = hoop ? hoop.w * view.w / 2 : 1;
+  const sdx = mirror ? -ev.dx : ev.dx;
+  ticker(Math.abs(ev.dx) > rimW ? (sdx < 0 ? '↩ Off to the left' : '↪ Off to the right') : '😤 Rimmed out');
+  if (mode.type === 'hothand' && mode.start && !mode.done) endMode();
 }
 function updateAccuracy() {
   $('shotSub').textContent = shots.attempts ? `${shots.accuracy()}% of ${shots.attempts}` : '';
 }
 function pop(id) { const el = $(id); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); setTimeout(() => el.classList.remove('pop'), 140); }
 function toast(msg) { const el = $('toast'); el.textContent = msg; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
+function ticker(msg) { const el = $('tickerTxt'); el.textContent = msg; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
 function burst(x, y, n, colors) {
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, sp = 120 + Math.random() * 420;
@@ -706,41 +853,53 @@ function burst(x, y, n, colors) {
       size: 2 + Math.random() * 4, color: colors[i % colors.length] });
   }
 }
+function snapshotArc(t, kind) {
+  const pts = arcBuf.filter(p => t - p.t < 1400);
+  if (pts.length > 4) arcFx.push({ pts: pts.slice(), t0: t, kind });
+  if (arcFx.length > 3) arcFx.shift();
+}
 
 /* ---------- game modes ---------- */
 function fmtMs(ms) { return (ms / 1000).toFixed(1) + 's'; }
 function refreshRecordUI() {
   $('recSprint').textContent = records.sprint60 ? records.sprint60 : '—';
   $('recSplash').textContent = records.splash5Ms ? fmtMs(records.splash5Ms) : '—';
+  $('recHot').textContent = records.hotHand ? records.hotHand : '—';
   $('recTotals').textContent = `${records.totalDribbles} dribbles · ${records.totalMakes} buckets`;
   $('recStreak').textContent = records.bestStreak;
+  $('recSpeed').textContent = records.maxKmh ? `${records.maxKmh.toFixed(0)} km/h` : '—';
   $('voiceSwitch').classList.toggle('on', voiceOn);
 }
 function resetCounters() {
-  dribbles.reset(); shots.reset(); hands = { L: 0, R: 0 };
+  dribbles.reset(); shots.reset(); hands = { L: 0, R: 0, X: 0 };
+  prevHand = null; makeStreak = 0; maxKmh = 0; fireLevel = 0;
+  $('fireGlow').className = '';
   $('dribNum').textContent = '0'; $('shotNum').textContent = '0';
   $('streakSub').textContent = ''; $('shotSub').textContent = '';
-  $('handChip').style.display = 'none';
+  $('handChip').style.display = 'none'; $('speedChip').style.display = 'none';
+  $('comboBar').style.width = '0%';
   sparkCtx.clearRect(0, 0, 236, 68);
   sessionStart = performance.now();
 }
 let countTimer = null;
 function startMode(type) {
-  if (type === 'splash5' && !hoop) {
+  if ((type === 'splash5' || type === 'hothand') && !hoop) {
     $('modeSheet').classList.remove('show');
-    showErr('Set the hoop first (🏀 HOOP button), then start Splash Five');
+    showErr('Set the hoop first (🏀 HOOP button), then start this mode');
     return;
   }
   $('modeSheet').classList.remove('show');
   $('resultSheet').classList.remove('show');
-  mode = { type, start: 0, done: false };
+  mode = { type, start: 0, done: false, saidTen: false };
   if (type === 'free') { resetCounters(); return; }
   /* 3-2-1 countdown */
   let n = 3;
   paused = true;
   const cEl = $('count'), nEl = $('countNum');
   cEl.classList.add('show'); nEl.textContent = n;
-  say(type === 'sprint60' ? 'Sixty second dribble sprint. Ready?' : 'First to five buckets. Ready?');
+  say(type === 'sprint60' ? 'Sixty second dribble sprint. Ready?'
+    : type === 'splash5' ? 'First to five buckets. Ready?'
+    : 'Hot hand. Miss and it is over. Ready?');
   chime([440], .1);
   clearInterval(countTimer);
   countTimer = setInterval(() => {
@@ -761,7 +920,7 @@ function checkMode(t) {
   if (!mode.start || mode.done) return;
   if (mode.type === 'sprint60') {
     const left = 60000 - (t - mode.start);
-    if (left <= 10500 && left > 9500) say('Ten seconds!');
+    if (left <= 10500 && !mode.saidTen) { mode.saidTen = true; say('Ten seconds!'); }
     if (left <= 0) endMode();
   } else if (mode.type === 'splash5' && shots.makes >= 5) {
     endMode();
@@ -781,7 +940,7 @@ function endMode() {
     $('resC').textContent = `${hands.L}/${hands.R}`; $('resCL').textContent = 'Left / Right';
     $('resD').textContent = records.sprint60; $('resDL').textContent = 'Record';
     say(`Time! ${dribbles.count} dribbles. ${recMsg ? 'New record!' : ''}`);
-  } else {
+  } else if (mode.type === 'splash5') {
     const ms = t - mode.start;
     $('resTitle').innerHTML = 'Splash! <em>Five down</em>';
     $('resSub').textContent = 'Five buckets, timed';
@@ -791,6 +950,17 @@ function endMode() {
     $('resC').textContent = shots.attempts; $('resCL').textContent = 'Attempts';
     $('resD').textContent = fmtMs(records.splash5Ms); $('resDL').textContent = 'Record';
     say(`Five buckets in ${(ms / 1000).toFixed(1)} seconds. ${recMsg ? 'New record!' : ''}`);
+  } else {
+    const run = shots.makes;
+    $('resTitle').innerHTML = 'Cooled off! <em>Hot hand over</em>';
+    $('resSub').textContent = 'Consecutive makes before the miss';
+    if (run > (records.hotHand || 0)) { records.hotHand = run; recMsg = '🏆 NEW RECORD!'; }
+    else if (run === (records.hotHand || 0) && run > 0) recMsg = '➰ Tied your record';
+    $('resA').textContent = run; $('resAL').textContent = 'Makes in a row';
+    $('resB').textContent = shots.accuracy() + '%'; $('resBL').textContent = 'Accuracy';
+    $('resC').textContent = shots.attempts; $('resCL').textContent = 'Attempts';
+    $('resD').textContent = records.hotHand; $('resDL').textContent = 'Record';
+    say(`${run} straight buckets. ${recMsg.includes('NEW') ? 'New record!' : ''}`);
   }
   $('resRecord').textContent = recMsg;
   saveRecords();
@@ -825,6 +995,8 @@ $('resShare').onclick = async () => {
   c.fillText(new Date().toLocaleDateString(), 540, 195);
   const rows = mode.type === 'splash5'
     ? [[$('resA').textContent, 'FIVE BUCKETS IN'], [$('resB').textContent, 'ACCURACY'], [$('resC').textContent, 'ATTEMPTS']]
+    : mode.type === 'hothand'
+    ? [[$('resA').textContent, 'MAKES IN A ROW'], [$('resB').textContent, 'ACCURACY'], [$('resC').textContent, 'ATTEMPTS']]
     : [[String(dribbles.count), 'REAL DRIBBLES'], [String(dribbles.bestStreak), 'BEST STREAK'], [String(shots.makes), 'BUCKETS']];
   rows.forEach(([n, l], i) => {
     const y = 420 + i * 300;
@@ -847,40 +1019,89 @@ $('resShare').onclick = async () => {
 };
 
 /* ---------- drawing ---------- */
-const BONES = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],
-  [23,25],[25,27],[24,26],[26,28],[27,31],[28,32],[29,31],[30,32],[27,29],[28,30]];
+const TORSO = [[11,12],[12,24],[24,23],[23,11]];
+const ARMS  = [[11,13],[13,15],[12,14],[14,16]];
+const LEGS  = [[23,25],[25,27],[24,26],[26,28],[27,31],[28,32],[27,29],[28,30],[29,31],[30,32]];
 let lastFrameT = 0;
+function vis(i) { return (lastPose[i]?.visibility ?? 1) > .35; }
 function draw(t, ballPresent, rim) {
   const dt = Math.min((t - lastFrameT) / 1000, .05); lastFrameT = t;
   ctx.clearRect(0, 0, innerWidth, innerHeight);
 
-  /* stick figure */
+  /* ---- stick figure: tapered glowing limbs, torso fill, head ---- */
   if (lastPose) {
-    ctx.save();
-    ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.shadowColor = 'rgba(45,226,230,.8)'; ctx.shadowBlur = 14;
     const P = lastPose.map(l => v2s(l.x * view.w, l.y * view.h));
+    const bodyS = Math.max(Math.hypot(P[11][0] - P[12][0], P[11][1] - P[12][1]), 34);
     const grad = ctx.createLinearGradient(0, 0, 0, innerHeight);
     grad.addColorStop(0, '#2de2e6'); grad.addColorStop(1, '#7b2ff7');
-    ctx.strokeStyle = grad;
-    ctx.beginPath();
-    for (const [a, b] of BONES) {
-      if ((lastPose[a]?.visibility ?? 1) < .35 || (lastPose[b]?.visibility ?? 1) < .35) continue;
-      ctx.moveTo(P[a][0], P[a][1]); ctx.lineTo(P[b][0], P[b][1]);
+    ctx.save();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+    /* torso fill */
+    if (vis(11) && vis(12) && vis(23) && vis(24)) {
+      ctx.beginPath();
+      ctx.moveTo(P[11][0], P[11][1]); ctx.lineTo(P[12][0], P[12][1]);
+      ctx.lineTo(P[24][0], P[24][1]); ctx.lineTo(P[23][0], P[23][1]);
+      ctx.closePath();
+      ctx.globalAlpha = .14; ctx.fillStyle = grad; ctx.fill(); ctx.globalAlpha = 1;
     }
-    ctx.stroke();
-    if ((lastPose[0]?.visibility ?? 1) > .35) {
-      const [hx, hy] = P[0];
-      const r = Math.max(Math.hypot(P[7][0] - P[8][0], P[7][1] - P[8][1]) * .62, 10);
-      ctx.beginPath(); ctx.arc(hx, hy, r, 0, Math.PI * 2); ctx.stroke();
+    /* glow pass then crisp pass, width per limb group */
+    const groups = [[TORSO, bodyS * .17], [LEGS, bodyS * .14], [ARMS, bodyS * .11]];
+    for (const pass of [0, 1]) {
+      ctx.strokeStyle = grad;
+      ctx.shadowColor = 'rgba(45,226,230,.85)';
+      ctx.shadowBlur = pass === 0 ? 22 : 0;
+      ctx.globalAlpha = pass === 0 ? .5 : 1;
+      for (const [bones, w] of groups) {
+        ctx.lineWidth = Math.max(pass === 0 ? w * 1.6 : w, 3);
+        ctx.beginPath();
+        for (const [a, b] of bones) {
+          if (!vis(a) || !vis(b)) continue;
+          ctx.moveTo(P[a][0], P[a][1]); ctx.lineTo(P[b][0], P[b][1]);
+        }
+        ctx.stroke();
+      }
     }
-    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+    /* head */
+    if (vis(0)) {
+      const r = Math.max(bodyS * .34, 10);
+      ctx.shadowColor = 'rgba(45,226,230,.85)'; ctx.shadowBlur = 16;
+      ctx.strokeStyle = grad; ctx.lineWidth = Math.max(bodyS * .1, 3.5);
+      ctx.beginPath(); ctx.arc(P[0][0], P[0][1] - r * .25, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = .12; ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(P[0][0], P[0][1] - r * .25, r, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    /* joints: bright core + halo on the key ones */
     ctx.fillStyle = '#eafcff';
-    for (const [a] of BONES) { ctx.beginPath(); ctx.arc(P[a][0], P[a][1], 3, 0, Math.PI * 2); ctx.fill(); }
+    for (const i of [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) {
+      if (!vis(i)) continue;
+      ctx.beginPath(); ctx.arc(P[i][0], P[i][1], Math.max(bodyS * .05, 2.6), 0, Math.PI * 2); ctx.fill();
+    }
     ctx.restore();
   }
 
-  /* ball trail + marker */
+  /* ---- shot arc traces (make = cool, miss = hot) ---- */
+  arcFx = arcFx.filter(a => t - a.t0 < 1600);
+  for (const a of arcFx) {
+    const fade = 1 - (t - a.t0) / 1600;
+    ctx.save();
+    ctx.lineWidth = 4 * fade + 1; ctx.lineCap = 'round';
+    ctx.shadowBlur = 14 * fade;
+    ctx.shadowColor = a.kind === 'make' ? 'rgba(61,255,160,.9)' : 'rgba(255,93,93,.9)';
+    ctx.strokeStyle = a.kind === 'make' ? `rgba(61,255,160,${.8 * fade})` : `rgba(255,120,80,${.8 * fade})`;
+    ctx.beginPath();
+    a.pts.forEach((p, i) => {
+      const [x, y] = v2s(p.x, p.y);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ---- ball trail + marker ---- */
   if (ballPresent && tracker.trail.length > 1) {
     ctx.save();
     for (let i = 1; i < tracker.trail.length; i++) {
@@ -900,32 +1121,62 @@ function draw(t, ballPresent, rim) {
     ctx.shadowBlur = 0;
     ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(bx, by, br * pulse + 6, 0, Math.PI * 2); ctx.stroke();
+    /* crosshair ticks */
+    ctx.strokeStyle = 'rgba(255,179,71,.9)'; ctx.lineWidth = 2;
+    for (let k = 0; k < 4; k++) {
+      const a = k * Math.PI / 2 + t / 900;
+      ctx.beginPath();
+      ctx.moveTo(bx + Math.cos(a) * (br + 9), by + Math.sin(a) * (br + 9));
+      ctx.lineTo(bx + Math.cos(a) * (br + 15), by + Math.sin(a) * (br + 15));
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
-  /* hoop */
+  /* ---- hoop: backboard + double rim + swaying net ---- */
   if (hoop) {
     const [hx, hy] = v2s(hoop.cx * view.w, hoop.cy * view.h);
     const hw = hoop.w * view.w * view.scale / 2;
     const glow = .45 + rimPulse * .55;
     rimPulse = Math.max(rimPulse - dt * 1.4, 0);
     ctx.save();
-    ctx.shadowColor = `rgba(45,226,230,${glow})`; ctx.shadowBlur = 20 + rimPulse * 30;
-    ctx.strokeStyle = editingHoop ? '#ffb347' : `rgba(45,226,230,${.75 + rimPulse * .25})`;
-    ctx.lineWidth = 4; if (editingHoop) ctx.setLineDash([8, 7]);
-    ctx.beginPath(); ctx.ellipse(hx, hy, hw * (1 + rimPulse * .18), hw * .32 * (1 + rimPulse * .18), 0, 0, Math.PI * 2); ctx.stroke();
+
+    /* backboard */
+    const bw = hw * 2.5, bh = hw * 1.7, bx0 = hx - bw / 2, by0 = hy - bh - hw * .34;
+    ctx.fillStyle = 'rgba(200,225,255,.07)';
+    ctx.strokeStyle = 'rgba(220,235,255,.55)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.roundRect(bx0, by0, bw, bh, 6); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 1.6;
+    ctx.strokeRect(hx - hw * .62, hy - hw * .95, hw * 1.24, hw * .8);   // shooter's square
+    ctx.beginPath(); ctx.moveTo(hx, hy - hw * .15); ctx.lineTo(hx, hy - hw * .34); ctx.stroke(); // bracket
+
+    /* rim: back arc dimmer, front arc bright */
+    const rw = hw * (1 + rimPulse * .18), rh = hw * .32 * (1 + rimPulse * .18);
+    ctx.shadowColor = `rgba(45,226,230,${glow})`; ctx.shadowBlur = 18 + rimPulse * 30;
+    ctx.lineWidth = 4.5;
+    if (editingHoop) ctx.setLineDash([8, 7]);
+    ctx.strokeStyle = editingHoop ? '#ffb347' : 'rgba(45,226,230,.45)';
+    ctx.beginPath(); ctx.ellipse(hx, hy, rw, rh, 0, Math.PI, 0); ctx.stroke();          // back half
+    ctx.strokeStyle = editingHoop ? '#ffb347' : `rgba(45,226,230,${.9 + rimPulse * .1})`;
+    ctx.beginPath(); ctx.ellipse(hx, hy, rw, rh, 0, 0, Math.PI); ctx.stroke();          // front half
     ctx.setLineDash([]);
-    ctx.shadowBlur = 0; ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,255,255,.5)';
-    const netH = hw * 1.15, seg = 6;
+
+    /* net: curved swaying strands */
+    ctx.shadowBlur = 0; ctx.lineWidth = 1.6; ctx.strokeStyle = 'rgba(255,255,255,.55)';
+    const netH = hw * 1.2, seg = 7, sway = Math.sin(t / 520) * hw * .05 + rimPulse * Math.sin(t / 60) * hw * .12;
     ctx.beginPath();
     for (let i = 0; i <= seg; i++) {
-      const fx = hx - hw + (2 * hw) * (i / seg);
-      const tx = hx - hw * .55 + (hw * 1.1) * (i / seg);
-      ctx.moveTo(fx, hy); ctx.lineTo(tx, hy + netH);
+      const f = i / seg;
+      const fx = hx - hw + 2 * hw * f;
+      const mx = hx - hw * .8 + 1.6 * hw * f + sway;
+      const tx = hx - hw * .5 + hw * f + sway * 1.4;
+      ctx.moveTo(fx, hy);
+      ctx.quadraticCurveTo(mx, hy + netH * .55, tx, hy + netH);
     }
-    for (let j = 1; j <= 2; j++) {
-      const yy = hy + netH * j / 3, sh = .55 + .45 * (1 - j / 3);
-      ctx.moveTo(hx - hw * sh, yy); ctx.lineTo(hx + hw * sh, yy);
+    for (let j = 1; j <= 3; j++) {
+      const yy = hy + netH * j / 3.4, sh = .95 - .38 * (j / 3);
+      ctx.moveTo(hx - hw * sh + sway * j / 3, yy);
+      ctx.quadraticCurveTo(hx + sway * j / 3, yy + 4, hx + hw * sh + sway * j / 3, yy);
     }
     ctx.stroke();
     if (editingHoop) {
@@ -935,7 +1186,7 @@ function draw(t, ballPresent, rim) {
     ctx.restore();
   }
 
-  /* particles */
+  /* ---- particles ---- */
   particles = particles.filter(p => p.life > 0);
   for (const p of particles) {
     p.life -= dt * 1.7; p.vy += 900 * dt;
@@ -982,6 +1233,9 @@ function updateHud(t, present) {
     timeEl.classList.toggle('urgent', left <= 10);
   } else if (mode.type === 'splash5' && mode.start && !mode.done) {
     timeEl.textContent = `⏱ ${((t - mode.start) / 1000).toFixed(1)}s · ${shots.makes}/5`;
+    timeEl.classList.remove('urgent');
+  } else if (mode.type === 'hothand' && mode.start && !mode.done) {
+    timeEl.textContent = `🔥 ${makeStreak} straight`;
     timeEl.classList.remove('urgent');
   } else {
     const s = Math.floor((t - sessionStart) / 1000);

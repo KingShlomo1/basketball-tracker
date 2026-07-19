@@ -91,8 +91,13 @@
   /* ---------- start screen ---------- */
   #gate{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:26px;background:radial-gradient(120% 90% at 50% 0%,#141425 0%,#07070b 60%);text-align:center;padding:24px;
-    transition:opacity .6s,visibility .6s}
+    transition:opacity .6s,visibility .6s;overflow:hidden}
   #gate.hide{opacity:0;visibility:hidden}
+  #gateBg{position:absolute;inset:-20px;width:calc(100% + 40px);height:calc(100% + 40px);object-fit:cover;
+    opacity:0;transition:opacity 1.4s ease;filter:blur(3px) saturate(.85) brightness(.38);z-index:-1}
+  #gateBg.live{opacity:1}
+  #gate::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background:radial-gradient(100% 80% at 50% 20%,transparent 30%,rgba(7,7,11,.85) 90%)}
   #gate h1{font-family:Anton,Impact,sans-serif;font-size:clamp(42px,11vw,84px);line-height:.95;letter-spacing:.02em}
   #gate h1 em{font-style:normal;background:linear-gradient(90deg,var(--orange),var(--orange2),var(--cyan));
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
@@ -309,6 +314,7 @@
 <div id="err"></div>
 
 <div id="gate">
+  <img id="gateBg" alt="">
   <div id="ballLoader"><div class="ball"></div><div class="shadow"></div></div>
   <h1>COURT<em>VISION</em></h1>
   <p>Point the camera at the player. The AI tracks the <b>body</b>, the <b>ball</b> and the <b>hoop</b> — real dribbles, real buckets, real accuracy. Challenges, records, instant replays.</p>
@@ -1334,6 +1340,20 @@ $('resetBtn').onclick = () => {
   saveRecords();
 };
 function showErr(msg) { const el = $('err'); el.textContent = msg; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 5000); }
+
+/* ---------- gate backdrop: real photo, silent fallback to the gradient ---------- */
+{
+  const cands = [
+    'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1400&q=70',
+    'https://images.unsplash.com/photo-1504450758481-7338eba7524a?auto=format&fit=crop&w=1400&q=70'
+  ];
+  const im = $('gateBg');
+  let i = 0;
+  const tryNext = () => { if (i >= cands.length) { im.remove(); return; } im.src = cands[i++]; };
+  im.addEventListener('error', tryNext);
+  im.addEventListener('load', () => im.classList.add('live'));
+  tryNext();
+}
 
 /* ---------- boot ---------- */
 $('startBtn').onclick = async () => {

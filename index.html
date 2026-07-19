@@ -50,9 +50,12 @@
   #hero{position:relative;height:100svh;min-height:600px;overflow:hidden;display:flex;
     align-items:flex-end;justify-content:center}
   .media{position:absolute;inset:0;overflow:hidden}
-  .media canvas,.media video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-  .media video{opacity:0;transition:opacity 1.2s ease}
-  .media video.live{opacity:1}
+  .media canvas,.media video,.media img.photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .media video,.media img.photo{opacity:0;transition:opacity 1.2s ease}
+  .media video.live,.media img.photo.live{opacity:1}
+  .media img.photo{filter:saturate(.9) contrast(1.12) brightness(.8)}
+  .media .duo{position:absolute;inset:0;pointer-events:none;mix-blend-mode:soft-light;
+    background:linear-gradient(135deg,rgba(255,122,24,.55),rgba(123,47,247,.5))}
   .media .tint{position:absolute;inset:0;background:
     linear-gradient(180deg,rgba(7,7,11,.55) 0%,rgba(7,7,11,.15) 40%,rgba(7,7,11,.92) 92%),
     radial-gradient(90% 60% at 50% 30%,transparent 40%,rgba(7,7,11,.55) 100%)}
@@ -159,6 +162,33 @@
   .bigStat .n small{font-size:.5em}
   .bigStat .l{margin-top:10px;font-size:11px;font-weight:800;letter-spacing:.24em;color:var(--dim);text-transform:uppercase}
 
+  /* ---------- photo gallery (bento) ---------- */
+  .bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:150px;gap:14px;margin-top:54px}
+  .tile{position:relative;border-radius:24px;overflow:hidden;border:1px solid var(--line);
+    background:linear-gradient(145deg,#141425,#0b0b16)}
+  .tile.tall{grid-row:span 2}
+  .tile.wide{grid-column:span 2}
+  .tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;
+    transition:opacity 1s ease,transform 6s ease;filter:saturate(.9) contrast(1.12) brightness(.82);
+    transform:scale(1.06)}
+  .tile img.live{opacity:1}
+  .tile:hover img{transform:scale(1.14)}
+  .tile::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;mix-blend-mode:soft-light;
+    background:linear-gradient(135deg,rgba(255,122,24,.5),rgba(123,47,247,.45))}
+  .tile::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:linear-gradient(180deg,transparent 45%,rgba(7,7,11,.82))}
+  .tile .cap{position:absolute;z-index:3;left:14px;bottom:11px;font-family:Anton,Impact,sans-serif;
+    font-size:15px;letter-spacing:.12em;text-transform:uppercase;text-shadow:0 2px 12px rgba(0,0,0,.8)}
+  .tile .cap small{display:block;font-family:Inter,sans-serif;font-size:9px;font-weight:800;
+    letter-spacing:.22em;color:var(--orange2);margin-bottom:2px}
+  /* fallback art when a photo can't load: neon court doodle */
+  .tile .fallback{position:absolute;inset:0;display:grid;place-items:center;font-size:44px;
+    opacity:.5;filter:drop-shadow(0 0 18px rgba(255,122,24,.6))}
+  .tile img.live ~ .fallback{display:none}
+  @media (max-width:720px){
+    .bento{grid-template-columns:repeat(2,1fr);grid-auto-rows:130px}
+  }
+
   /* ---------- steps ---------- */
   .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:18px;margin-top:54px;counter-reset:step}
   .steps .step{position:relative;border-left:2px solid rgba(255,122,24,.4);padding:6px 0 6px 26px}
@@ -200,7 +230,9 @@
 <header id="hero">
   <div class="media" id="heroMedia">
     <canvas id="heroScene"></canvas>
+    <img class="photo" data-slot="hero" alt="">
     <video muted loop playsinline autoplay preload="metadata" data-slot="hero"></video>
+    <div class="duo"></div>
     <div class="tint"></div>
   </div>
   <div id="heroInner" data-speed="-0.25">
@@ -229,7 +261,9 @@
   <div id="filmSticky">
     <div id="filmFrame" class="media">
       <canvas id="filmScene"></canvas>
+      <img class="photo" data-slot="film" alt="">
       <video muted loop playsinline autoplay preload="metadata" data-slot="film"></video>
+      <div class="duo"></div>
       <div class="tint"></div>
       <div class="filmCap">
         <div class="step" data-step="0">
@@ -287,6 +321,25 @@
   </div>
 </div></section>
 
+<!-- GALLERY -->
+<section class="pad" id="gallery">
+  <div class="secKick rv">Court culture</div>
+  <h2 class="secTitle rv">Shot on <em>real courts</em></h2>
+  <p class="secSub rv d1">Blacktop, chain nets, golden hour. Wherever you hoop, the tracker comes with you.</p>
+  <div class="bento">
+    <div class="tile tall rv"><img data-slot="g1" alt="Basketball hoop against the sky">
+      <div class="fallback">🏀</div><div class="cap"><small>01</small>Nothing but net</div></div>
+    <div class="tile rv d1"><img data-slot="g2" alt="Basketball on an outdoor court">
+      <div class="fallback">🌇</div><div class="cap"><small>02</small>Golden hour</div></div>
+    <div class="tile wide rv d2"><img data-slot="g3" alt="Player going up for a dunk">
+      <div class="fallback">💥</div><div class="cap"><small>03</small>Rise up</div></div>
+    <div class="tile rv d2"><img data-slot="g4" alt="Streetball court">
+      <div class="fallback">⛓️</div><div class="cap"><small>04</small>Cage runs</div></div>
+    <div class="tile wide rv d3"><img data-slot="g5" alt="Indoor gym rim">
+      <div class="fallback">🔦</div><div class="cap"><small>05</small>Gym lights</div></div>
+  </div>
+</section>
+
 <!-- HOW -->
 <section class="pad" id="how">
   <div class="secKick rv">Warm-up</div>
@@ -302,6 +355,8 @@
 <section id="cta">
   <div class="media">
     <canvas id="ctaScene"></canvas>
+    <img class="photo" data-slot="cta" alt="">
+    <div class="duo"></div>
     <div class="tint"></div>
   </div>
   <div id="ctaInner" data-speed="-0.15">
@@ -492,6 +547,29 @@ document.querySelectorAll('video[data-slot]').forEach(v => {
   };
   v.addEventListener('error', tryNext);
   v.addEventListener('canplay', () => { v.classList.add('live'); v.play().catch(() => {}); });
+  tryNext();
+});
+
+/* real photography: each slot tries candidates in order; on failure the styled
+   backdrop (canvas scene or neon tile) simply stays — nothing ever looks broken */
+const U = id => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1600&q=80`;
+const PHOTOS = {
+  hero: [U('photo-1546519638-68e109498ffc'), U('photo-1504450758481-7338eba7524a'), U('photo-1519861531473-9200262188bf')],
+  film: [U('photo-1519861531473-9200262188bf'), U('photo-1577471488278-16eec37ffcc2'), U('photo-1546519638-68e109498ffc')],
+  cta:  [U('photo-1504450758481-7338eba7524a'), U('photo-1502904550040-7534597429ae'), U('photo-1518063319789-7217e6706b04')],
+  g1:   [U('photo-1518063319789-7217e6706b04'), U('photo-1502904550040-7534597429ae')],
+  g2:   [U('photo-1502904550040-7534597429ae'), U('photo-1494199505258-5f95387f933c')],
+  g3:   [U('photo-1504450758481-7338eba7524a'), U('photo-1608245449230-4ac19066d2d0')],
+  g4:   [U('photo-1494199505258-5f95387f933c'), U('photo-1520399636535-24741e71b160')],
+  g5:   [U('photo-1577471488278-16eec37ffcc2'), U('photo-1515523110800-9415d13b84a8')]
+};
+document.querySelectorAll('img[data-slot]').forEach(im => {
+  const list = PHOTOS[im.dataset.slot] || [];
+  let i = 0;
+  const tryNext = () => { if (i >= list.length) { im.remove(); return; } im.src = list[i++]; };
+  im.addEventListener('error', tryNext);
+  im.addEventListener('load', () => im.classList.add('live'));
+  im.loading = 'lazy'; im.decoding = 'async';
   tryNext();
 });
 

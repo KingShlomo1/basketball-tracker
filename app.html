@@ -42,6 +42,7 @@
   .stat::after{content:"";position:absolute;top:0;left:-70%;width:50%;height:100%;transform:skewX(-22deg);
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.09),transparent);animation:cardSheen 5s 1s infinite}
   @keyframes cardSheen{0%{left:-70%}30%{left:130%}100%{left:130%}}
+  .stat .num.frac{font-size:clamp(22px,6vw,34px);padding-top:5px}
   .stat .num{font-family:Anton,Impact,sans-serif;font-size:clamp(30px,8vw,44px);line-height:1;
     letter-spacing:.02em;background:linear-gradient(180deg,#fff,#ffd9b0);
     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
@@ -224,7 +225,7 @@
   <div class="statRow">
     <div class="stat" id="statDrib"><div class="num" id="dribNum">0</div><div class="lbl">Dribbles</div>
       <div class="sub" id="streakSub"></div><div id="comboBar"></div></div>
-    <div class="stat" id="statShot"><div class="num" id="shotNum">0</div><div class="lbl">Buckets</div><div class="sub" id="shotSub"></div></div>
+    <div class="stat" id="statShot"><div class="num" id="shotNum">0</div><div class="lbl">Made · Shot</div><div class="sub" id="shotSub"></div></div>
     <div class="stat"><div class="num" id="dpmNum">0</div><div class="lbl">Per Min</div><div class="sub" id="timeSub">0:00</div></div>
   </div>
   <div id="ticker"><span id="tickerTxt"></span></div>
@@ -248,11 +249,12 @@
 </div></div>
 
 <div id="hoopBar">
-  <div class="hint" id="hoopHint">Drag on screen to place the rim</div>
+  <div class="hint" id="hoopHint">Auto-detect runs by itself — drag on screen to adjust</div>
   <div class="row">
     <span style="font-size:11px;color:var(--dim)">SIZE</span>
     <input type="range" id="hoopSize" min="6" max="40" value="16">
-    <button class="mini" id="hoopAuto">Auto-find</button>
+    <button class="mini" id="hoopAuto">Rescan</button>
+    <button class="mini" id="hoopClear">Clear</button>
     <button class="mini accent" id="hoopDone">Done</button>
   </div>
 </div>
@@ -500,7 +502,7 @@ const shots = new ShotCounter();
 
 let running = false, paused = false, facing = 'environment', mirror = false;
 let poseLm = null, objDet = null, stream = null;
-let lastPose = null;
+let lastPose = null, sPose = null, poseTrail = [], lastTrailT = 0;
 let hoop = null;               // {cx, cy, w} normalized to video dims
 let editingHoop = false;
 let soundOn = true, voiceOn = true;
@@ -741,6 +743,23 @@ function loop() {
     const pr = poseLm.detectForVideo(video, t + 0.01);
     lastPose = (pr.landmarks && pr.landmarks[0]) || null;
   }
+  /* fluid display pose: chase the detection so limbs glide at render rate */
+  if (lastPose) {
+    if (!sPose) sPose = lastPose.map(l => ({ ...l }));
+    else for (let i = 0; i < sPose.length; i++) {
+      const a = sPose[i], b = lastPose[i];
+      a.x += (b.x - a.x) * .6; a.y += (b.y - a.y) * .6;
+      a.visibility = (a.visibility ?? 1) + (((b.visibility ?? 1)) - (a.visibility ?? 1)) * .35;
+    }
+    if (t - lastTrailT > 90) {
+      lastTrailT = t;
+      poseTrail.push(sPose.map(l => ({ x: l.x, y: l.y, visibility: l.visibility })));
+      if (poseTrail.length > 3) poseTrail.shift();
+    }
+  } else { sPose = null; poseTrail = []; }
+
+  /* automatic hoop lock: keep scanning until the rim is found */
+  autoHoopScan(t);
 
   /* dribble zone: below the hips when we can see them, else lower 45% of frame */
   let zoneY = view.h * 0.55;
@@ -818,10 +837,15 @@ function onDribble(t) {
   burst(sx, sy, 14, ['#ff7a18', '#ffb347', '#ffffff']);
   drawSpark();
 }
+function updateShotStat() {
+  const el = $('shotNum');
+  el.textContent = shots.attempts ? `${shots.makes}/${shots.attempts}` : '0';
+  el.classList.toggle('frac', shots.attempts > 0);
+}
 function onShot() {
   chime([784, 1046, 1318], .18); vib([30, 40, 60]);
   pop('statShot');
-  $('shotNum').textContent = shots.makes;
+  updateShotStat();
   records.totalMakes++;
   makeStreak++;
   if (makeStreak > (records.hotHand || 0)) records.hotHand = makeStreak;
@@ -838,6 +862,8 @@ function onShot() {
   setTimeout(showReplay, 550);
 }
 function onMiss(ev) {
+  updateShotStat();
+  pop('statShot');
   updateAccuracy();
   chime([196], .12, 'sine', .12); vib(8);
   makeStreak = 0;
@@ -880,7 +906,8 @@ function resetCounters() {
   dribbles.reset(); shots.reset(); hands = { L: 0, R: 0, X: 0 };
   prevHand = null; makeStreak = 0; maxKmh = 0; fireLevel = 0;
   $('fireGlow').className = '';
-  $('dribNum').textContent = '0'; $('shotNum').textContent = '0';
+  $('dribNum').textContent = '0';
+  $('shotNum').textContent = '0'; $('shotNum').classList.remove('frac');
   $('streakSub').textContent = ''; $('shotSub').textContent = '';
   $('handChip').style.display = 'none'; $('speedChip').style.display = 'none';
   $('comboBar').style.width = '0%';
@@ -1025,66 +1052,107 @@ $('resShare').onclick = async () => {
 };
 
 /* ---------- drawing ---------- */
-const TORSO = [[11,12],[12,24],[24,23],[23,11]];
-const ARMS  = [[11,13],[13,15],[12,14],[14,16]];
-const LEGS  = [[23,25],[25,27],[24,26],[26,28],[27,31],[28,32],[27,29],[28,30],[29,31],[30,32]];
+const LIMBS = [
+  [11,13,.11],[13,15,.095],[12,14,.11],[14,16,.095],                       // arms
+  [23,25,.145],[25,27,.13],[24,26,.145],[26,28,.13],                       // legs
+  [27,31,.10],[27,29,.10],[29,31,.10],[28,32,.10],[28,30,.10],[30,32,.10], // feet
+  [11,12,.15],[23,24,.15]                                                  // shoulder + hip bars
+];
 let lastFrameT = 0;
-function vis(i) { return (lastPose[i]?.visibility ?? 1) > .35; }
+function poseSegments(pose, toScreen) {
+  const V = i => (pose[i]?.visibility ?? 1) > .3;
+  const P = pose.map(l => toScreen(l.x, l.y));
+  const bodyS = Math.max(Math.hypot(P[11][0] - P[12][0], P[11][1] - P[12][1]), 34);
+  const segs = [];
+  for (const [a, b, w] of LIMBS)
+    if (V(a) && V(b)) segs.push([P[a][0], P[a][1], P[b][0], P[b][1], Math.max(bodyS * w, 3)]);
+  /* spine + neck from synthetic midpoints */
+  if (V(11) && V(12) && V(23) && V(24)) {
+    const shx = (P[11][0] + P[12][0]) / 2, shy = (P[11][1] + P[12][1]) / 2;
+    const hpx = (P[23][0] + P[24][0]) / 2, hpy = (P[23][1] + P[24][1]) / 2;
+    segs.push([shx, shy, hpx, hpy, Math.max(bodyS * .18, 4)]);
+    if (V(0)) segs.push([shx, shy, P[0][0], P[0][1] + bodyS * .28, Math.max(bodyS * .09, 3)]);
+  }
+  return { segs, P, V, bodyS };
+}
+function strokeSegs(segs, widthMul) {
+  for (const [x1, y1, x2, y2, w] of segs) {
+    ctx.lineWidth = w * widthMul;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+}
 function draw(t, ballPresent, rim) {
   const dt = Math.min((t - lastFrameT) / 1000, .05); lastFrameT = t;
   ctx.clearRect(0, 0, innerWidth, innerHeight);
 
-  /* ---- stick figure: tapered glowing limbs, torso fill, head ---- */
-  if (lastPose) {
-    const P = lastPose.map(l => v2s(l.x * view.w, l.y * view.h));
-    const bodyS = Math.max(Math.hypot(P[11][0] - P[12][0], P[11][1] - P[12][1]), 34);
+  /* ---- stickman v3: outlined neon capsules, spine, hands, ghost trail ---- */
+  if (sPose) {
+    const toScreen = (nx, ny) => v2s(nx * view.w, ny * view.h);
+    const hot = fireLevel === 2;
+    const c1 = hot ? '#ffb347' : '#2de2e6', c2 = hot ? '#ff3b00' : '#7b2ff7';
     const grad = ctx.createLinearGradient(0, 0, 0, innerHeight);
-    grad.addColorStop(0, '#2de2e6'); grad.addColorStop(1, '#7b2ff7');
+    grad.addColorStop(0, c1); grad.addColorStop(1, c2);
     ctx.save();
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
+    /* ghost trail: fading echoes of the last few poses */
+    poseTrail.forEach((gp, gi) => {
+      const a = [.03, .06, .1][gi + (3 - poseTrail.length)] ?? .05;
+      ctx.globalAlpha = a; ctx.strokeStyle = c1; ctx.shadowBlur = 0;
+      strokeSegs(poseSegments(gp, toScreen).segs, .75);
+    });
+    ctx.globalAlpha = 1;
+
+    const { segs, P, V, bodyS } = poseSegments(sPose, toScreen);
+
     /* torso fill */
-    if (vis(11) && vis(12) && vis(23) && vis(24)) {
+    if (V(11) && V(12) && V(23) && V(24)) {
       ctx.beginPath();
       ctx.moveTo(P[11][0], P[11][1]); ctx.lineTo(P[12][0], P[12][1]);
       ctx.lineTo(P[24][0], P[24][1]); ctx.lineTo(P[23][0], P[23][1]);
       ctx.closePath();
-      ctx.globalAlpha = .14; ctx.fillStyle = grad; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.globalAlpha = .13; ctx.fillStyle = grad; ctx.fill(); ctx.globalAlpha = 1;
     }
-    /* glow pass then crisp pass, width per limb group */
-    const groups = [[TORSO, bodyS * .17], [LEGS, bodyS * .14], [ARMS, bodyS * .11]];
-    for (const pass of [0, 1]) {
-      ctx.strokeStyle = grad;
-      ctx.shadowColor = 'rgba(45,226,230,.85)';
-      ctx.shadowBlur = pass === 0 ? 22 : 0;
-      ctx.globalAlpha = pass === 0 ? .5 : 1;
-      for (const [bones, w] of groups) {
-        ctx.lineWidth = Math.max(pass === 0 ? w * 1.6 : w, 3);
-        ctx.beginPath();
-        for (const [a, b] of bones) {
-          if (!vis(a) || !vis(b)) continue;
-          ctx.moveTo(P[a][0], P[a][1]); ctx.lineTo(P[b][0], P[b][1]);
-        }
-        ctx.stroke();
-      }
+    /* pass 1: dark outline so the figure pops on bright backgrounds */
+    ctx.strokeStyle = 'rgba(4,8,16,.6)'; ctx.shadowBlur = 0;
+    strokeSegs(segs, 1.5);
+    /* pass 2: soft neon glow */
+    ctx.strokeStyle = grad;
+    ctx.shadowColor = hot ? 'rgba(255,110,0,.9)' : 'rgba(45,226,230,.85)';
+    ctx.shadowBlur = 22; ctx.globalAlpha = .55;
+    strokeSegs(segs, 1.3);
+    /* pass 3: crisp core */
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    strokeSegs(segs, 1);
+
+    /* hands */
+    for (const wi of [15, 16]) {
+      if (!V(wi)) continue;
+      const hr = Math.max(bodyS * .085, 4);
+      ctx.fillStyle = grad; ctx.globalAlpha = .9;
+      ctx.shadowColor = hot ? 'rgba(255,110,0,.9)' : 'rgba(45,226,230,.8)'; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.arc(P[wi][0], P[wi][1], hr, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowBlur = 0; ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
-    /* head */
-    if (vis(0)) {
-      const r = Math.max(bodyS * .34, 10);
-      ctx.shadowColor = 'rgba(45,226,230,.85)'; ctx.shadowBlur = 16;
+    /* head: outlined ring + soft fill */
+    if (V(0)) {
+      const r = Math.max(bodyS * .33, 10);
+      const hx = P[0][0], hy = P[0][1] - r * .2;
+      ctx.strokeStyle = 'rgba(4,8,16,.6)'; ctx.lineWidth = Math.max(bodyS * .1, 3.5) * 1.5;
+      ctx.beginPath(); ctx.arc(hx, hy, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.shadowColor = hot ? 'rgba(255,110,0,.9)' : 'rgba(45,226,230,.85)'; ctx.shadowBlur = 16;
       ctx.strokeStyle = grad; ctx.lineWidth = Math.max(bodyS * .1, 3.5);
-      ctx.beginPath(); ctx.arc(P[0][0], P[0][1] - r * .25, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(hx, hy, r, 0, Math.PI * 2); ctx.stroke();
       ctx.shadowBlur = 0;
-      ctx.globalAlpha = .12; ctx.fillStyle = grad;
-      ctx.beginPath(); ctx.arc(P[0][0], P[0][1] - r * .25, r, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = .14; ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(hx, hy, r, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
     }
-    /* joints: bright core + halo on the key ones */
+    /* joints */
     ctx.fillStyle = '#eafcff';
-    for (const i of [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) {
-      if (!vis(i)) continue;
-      ctx.beginPath(); ctx.arc(P[i][0], P[i][1], Math.max(bodyS * .05, 2.6), 0, Math.PI * 2); ctx.fill();
+    for (const i of [11, 12, 13, 14, 23, 24, 25, 26, 27, 28]) {
+      if (!V(i)) continue;
+      ctx.beginPath(); ctx.arc(P[i][0], P[i][1], Math.max(bodyS * .045, 2.4), 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();
   }
@@ -1227,8 +1295,10 @@ function updateHud(t, present) {
   if (hudTick++ % 10 !== 0) return;
   $('ballDot').className = 'dot ' + (present ? 'on' : 'warn');
   $('ballChip').textContent = present ? 'Ball locked' : 'Ball: searching…';
-  $('hoopDot').className = 'dot ' + (hoop ? 'on' : '');
-  $('hoopChip').textContent = hoop ? 'Hoop set — shots armed' : 'Hoop: tap 🏀 HOOP to set';
+  $('hoopDot').className = 'dot ' + (hoop ? 'on' : 'warn');
+  $('hoopChip').textContent = hoop
+    ? (hoop.auto ? 'Hoop auto-locked ✓' : 'Hoop set — shots armed')
+    : 'Finding hoop… aim camera at the rim';
   const dpm = dribbles.perMinute(t);
   $('dpmNum').textContent = dpm;
   if (dpm > (records.bestDpm || 0)) records.bestDpm = dpm;
@@ -1251,6 +1321,30 @@ function updateHud(t, present) {
   if (hudTick % 300 === 0) saveRecords();
 }
 
+/* ---------- automatic hoop lock ---------- */
+let lastHoopScanT = 0, hoopVotes = [];
+function autoHoopScan(t) {
+  if (hoop || editingHoop || paused || t - lastHoopScanT < 1200) return;
+  lastHoopScanT = t;
+  const f = scanForHoop();
+  if (!f) { if (hoopVotes.length && t - hoopVotes[hoopVotes.length - 1].t > 6000) hoopVotes = []; return; }
+  hoopVotes.push({ ...f, t });
+  if (hoopVotes.length > 4) hoopVotes.shift();
+  /* need two recent scans agreeing on the same spot before locking on */
+  for (let i = 0; i < hoopVotes.length - 1; i++) {
+    const a = hoopVotes[i], b = hoopVotes[hoopVotes.length - 1];
+    if (Math.abs(a.cx - b.cx) < .06 && Math.abs(a.cy - b.cy) < .06) {
+      hoop = { cx: (a.cx + b.cx) / 2, cy: (a.cy + b.cy) / 2, w: Math.max(a.w, b.w), auto: true };
+      try { localStorage.setItem('cv_hoop', JSON.stringify(hoop)); } catch {}
+      hoopVotes = [];
+      chime([659, 880], .14); vib(20);
+      ticker('🎯 Hoop locked automatically');
+      say('Hoop locked. Shots are live.');
+      return;
+    }
+  }
+}
+
 /* ---------- hoop editing ---------- */
 function setHoopUI(on) {
   editingHoop = on;
@@ -1263,11 +1357,16 @@ $('hoopDone').onclick = () => {
   setHoopUI(false);
   try { localStorage.setItem('cv_hoop', JSON.stringify(hoop)); } catch {}
 };
+$('hoopClear').onclick = () => {
+  hoop = null; hoopVotes = [];
+  try { localStorage.removeItem('cv_hoop'); } catch {}
+  $('hoopHint').textContent = 'Cleared — auto-detect is searching again';
+};
 $('hoopSize').oninput = e => { if (hoop) hoop.w = e.target.value / 100; };
 $('hoopAuto').onclick = () => {
   const found = scanForHoop();
-  if (found) { hoop = found; $('hoopHint').textContent = 'Found it! Drag to fine-tune'; }
-  else $('hoopHint').textContent = 'Couldn’t spot a rim — drag to place it';
+  if (found) { hoop = { ...found, auto: true }; $('hoopHint').textContent = 'Found it! Drag to fine-tune'; }
+  else $('hoopHint').textContent = 'No rim in view yet — aim the camera at it, or drag to place';
 };
 let dragging = false;
 canvas.style.pointerEvents = 'none';
@@ -1279,7 +1378,7 @@ document.addEventListener('pointermove', e => { if (dragging) moveHoop(e); });
 document.addEventListener('pointerup', () => dragging = false);
 function moveHoop(e) {
   const [vx, vy] = s2v(e.clientX, e.clientY);
-  hoop = { ...(hoop || { w: .16 }), cx: Math.min(Math.max(vx / view.w, 0), 1), cy: Math.min(Math.max(vy / view.h, 0), 1) };
+  hoop = { ...(hoop || { w: .16 }), cx: Math.min(Math.max(vx / view.w, 0), 1), cy: Math.min(Math.max(vy / view.h, 0), 1), auto: false };
 }
 
 /** Best-effort: look for a band of orange rim pixels in the upper part of the frame. */
@@ -1296,7 +1395,7 @@ function scanForHoop() {
   for (let y = 0; y < Math.floor(h * .72); y++) {
     for (let x = 0; x < w; x++) {
       const i = (y * w + x) * 4, r = px[i], g = px[i + 1], b = px[i + 2];
-      if (r > 95 && r > g + 28 && g > b - 6 && r > b + 48) {
+      if (r > 88 && r > g + 24 && r > b + 40) {           // orange or red rim
         if (Math.hypot(x - bx, y - by) < br) continue;   // skip the ball itself
         pts.push([x, y]);
       }

@@ -13,10 +13,22 @@ browser and tracks, live:
 - **Buckets** — when the ball passes down through the pinned rim: counter,
   particle burst, swish sound, and a slow-mo **instant replay**. Rim-area misses
   are tracked too, so you get **attempts and shooting accuracy %**.
-- **Game modes** — ⚡ *Dribble Sprint* (most real dribbles in 60 s),
+- **Drill Library** — ⚡ *Dribble Sprint* (most real dribbles in 60 s),
   💦 *Splash Five* (race the clock to 5 makes) and 🔥 *Hot Hand* (keep making
-  shots until you miss), with 3-2-1 countdowns, a **voice announcer**,
-  personal **records** saved on-device, and a shareable session stat card.
+  shots until you miss), each with a difficulty badge, category tags and a live
+  **circular progress ring** with rotating coaching cues. 3-2-1 countdowns, a
+  **voice announcer**, personal **records** saved on-device, and a shareable card.
+- **Score & multiplier** — every real dribble and bucket scores points, with
+  **+N popups** that float off the ball and a live **multiplier** that rides your
+  dribble streak. Top score is saved.
+- **Weekly shots goal** — set a shots-per-week target and track progress toward
+  it; it carries across sessions and resets each Monday.
+- **Your Stats** — an all-time analytics screen: workouts, make %, total
+  makes/shots, dribbles and time on court, a **points-per-session trend** line and
+  a **make/miss donut**.
+- **Shooting strip** — live *make · miss · release angle · shot time · accuracy*
+  along the bottom (angle and time estimated from the tracked shot arc), plus a
+  **make/miss shot-chart minimap**.
 - **Extras** — shot **arc traces** (green = make, red = miss), miss feedback
   ("off left / off right / rimmed out"), **crossover counting**, real-world
   **ball speed in km/h** (scaled off the ball's known size), an NBA-Jam-style

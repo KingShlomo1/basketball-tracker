@@ -184,6 +184,20 @@
     background:#888;transition:transform .2s,background .2s}
   .switch.on{background:rgba(255,122,24,.5)}
   .switch.on::after{transform:translateX(20px);background:var(--orange2)}
+  /* analytics screen */
+  .statGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin:4px 0 18px}
+  .statGrid > div{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:14px 8px;text-align:center}
+  .statGrid .n{font-family:Anton,Impact,sans-serif;font-size:23px;line-height:1;
+    background:linear-gradient(180deg,#fff,#cfeffff0);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .statGrid .l{font-size:8px;font-weight:800;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-top:6px}
+  .chartCard{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+  .chartCard .ct{font-size:10px;font-weight:800;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;margin-bottom:10px}
+  .chartCard canvas{display:block;width:100%}
+  .splitWrap{display:flex;align-items:center;gap:16px}
+  .splitLeg{display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:600}
+  .splitLeg .row{display:flex;align-items:center;gap:8px}
+  .splitLeg .sw{width:11px;height:11px;border-radius:3px;flex:none}
+  .splitLeg b{font-family:Anton,Impact,sans-serif;font-weight:400;font-size:16px}
   .recap{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
   .recap div{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:14px;text-align:center}
   .recap .n{font-family:Anton,Impact,sans-serif;font-size:34px;line-height:1;
@@ -424,7 +438,39 @@
     <div class="switchRow" style="color:var(--dim);font-weight:400;font-size:11px">
       <span>All-time: <b id="recTotals" style="color:var(--text)">0 dribbles · 0 buckets</b> · best streak <b id="recStreak" style="color:var(--text)">0</b> · top score <b id="recPoints" style="color:var(--text)">0</b> · fastest ball <b id="recSpeed" style="color:var(--text)">—</b></span>
     </div>
-    <div class="sheetBtns"><button class="mini" id="modeClose">Close</button></div>
+    <div class="sheetBtns"><button class="mini accent" id="statsBtn">📊 Your stats</button><button class="mini" id="modeClose">Close</button></div>
+  </div>
+</div>
+
+<!-- analytics -->
+<div class="sheet" id="statsSheet">
+  <div class="panel">
+    <h2>Your <em>Stats</em></h2>
+    <div class="sub" id="statsSub">All-time breakdown</div>
+    <div class="statGrid">
+      <div><div class="n" id="stWorkouts">0</div><div class="l">Workouts</div></div>
+      <div><div class="n" id="stMakePct">0%</div><div class="l">Make %</div></div>
+      <div><div class="n" id="stPoints">0</div><div class="l">Top score</div></div>
+      <div><div class="n" id="stShots">0/0</div><div class="l">Makes / Shots</div></div>
+      <div><div class="n" id="stDribbles">0</div><div class="l">Dribbles</div></div>
+      <div><div class="n" id="stTime">0h</div><div class="l">Time on court</div></div>
+    </div>
+    <div class="chartCard">
+      <div class="ct">Points per session</div>
+      <canvas id="trendCv" width="520" height="150"></canvas>
+    </div>
+    <div class="chartCard">
+      <div class="ct">Shot split — all time</div>
+      <div class="splitWrap">
+        <canvas id="splitCv" width="150" height="150" style="width:120px;flex:none"></canvas>
+        <div class="splitLeg">
+          <div class="row"><span class="sw" style="background:var(--good)"></span>Makes <b id="lgMake" style="color:var(--good)">0</b></div>
+          <div class="row"><span class="sw" style="background:var(--bad)"></span>Misses <b id="lgMiss" style="color:var(--bad)">0</b></div>
+          <div class="row" style="color:var(--dim);font-weight:500;font-size:11px">Green through the rim, red off it.</div>
+        </div>
+      </div>
+    </div>
+    <div class="sheetBtns"><button class="mini" id="statsClose">Close</button></div>
   </div>
 </div>
 
@@ -726,6 +772,17 @@ try {
   if (w.key === weekly.key) { weekly.shots = w.shots || 0; weekly.makes = w.makes || 0; }
 } catch {}
 function saveWeekly() { try { localStorage.setItem('cv_weekly', JSON.stringify(weekly)); } catch {} }
+
+/* ---------- session history (for the analytics screen) ---------- */
+let history = [];
+try { history = JSON.parse(localStorage.getItem('cv_history') || '[]'); } catch {}
+function logSession() {
+  if (dribbles.count === 0 && shots.attempts === 0) return;   // nothing happened
+  history.push({ t: Date.now(), dribbles: dribbles.count, makes: shots.makes,
+    attempts: shots.attempts, points, ms: Math.max(0, performance.now() - sessionStart) });
+  if (history.length > 120) history.shift();
+  try { localStorage.setItem('cv_history', JSON.stringify(history)); } catch {}
+}
 function bumpWeek(made) {
   if (weekKey() !== weekly.key) { weekly.key = weekKey(); weekly.shots = 0; weekly.makes = 0; }
   weekly.shots++; if (made) weekly.makes++;
@@ -1373,6 +1430,7 @@ function refreshRecordUI() {
   $('voiceSwitch').classList.toggle('on', voiceOn);
 }
 function resetCounters() {
+  logSession();                                   // bank the session that just ended
   dribbles.reset(); shots.reset(); hands = { L: 0, R: 0, X: 0 };
   prevHand = null; makeStreak = 0; maxKmh = 0; fireLevel = 0;
   $('fireGlow').className = '';
@@ -1479,6 +1537,82 @@ $('modeClose').onclick = () => $('modeSheet').classList.remove('show');
 document.querySelectorAll('.modeCard').forEach(b => b.onclick = () => startMode(b.dataset.mode));
 $('goalMinus').onclick = () => { weekly.goal = Math.max(50, weekly.goal - 50); saveWeekly(); refreshGoalUI(); };
 $('goalPlus').onclick = () => { weekly.goal = Math.min(5000, weekly.goal + 50); saveWeekly(); refreshGoalUI(); };
+$('statsBtn').onclick = () => { renderStats(); $('statsSheet').classList.add('show'); };
+$('statsClose').onclick = () => $('statsSheet').classList.remove('show');
+
+/* ---------- analytics screen ---------- */
+function renderStats() {
+  const cur = (dribbles.count || shots.attempts)
+    ? [{ dribbles: dribbles.count, makes: shots.makes, attempts: shots.attempts, points,
+         ms: Math.max(0, performance.now() - sessionStart) }] : [];
+  const all = history.concat(cur);
+  const workouts = all.length;
+  const makes = all.reduce((s, x) => s + x.makes, 0);
+  const att = all.reduce((s, x) => s + x.attempts, 0);
+  const drib = all.reduce((s, x) => s + x.dribbles, 0);
+  const ms = all.reduce((s, x) => s + (x.ms || 0), 0);
+  const pct = att ? Math.round(makes / att * 100) : 0;
+  $('statsSub').textContent = workouts ? `All-time — across ${workouts} session${workouts > 1 ? 's' : ''}` : 'Play a session to build your stats';
+  $('stWorkouts').textContent = workouts;
+  $('stMakePct').textContent = pct + '%';
+  $('stPoints').textContent = (records.bestPoints || 0).toLocaleString();
+  $('stShots').textContent = `${makes.toLocaleString()}/${att.toLocaleString()}`;
+  $('stDribbles').textContent = drib.toLocaleString();
+  const hrs = ms / 3.6e6;
+  $('stTime').textContent = hrs >= 1 ? hrs.toFixed(1) + 'h' : Math.round(ms / 60000) + 'm';
+  $('lgMake').textContent = makes; $('lgMiss').textContent = att - makes;
+  drawTrend(all.map(x => x.points || 0));
+  drawSplit(makes, att - makes);
+}
+function drawTrend(series) {
+  const cv = $('trendCv'), c = cv.getContext('2d'), W = cv.width, H = cv.height;
+  c.clearRect(0, 0, W, H);
+  const pad = 10, baseY = H - 16;
+  if (series.length < 2) {
+    c.fillStyle = 'rgba(255,255,255,.35)'; c.font = '600 13px Inter, sans-serif';
+    c.textAlign = 'center'; c.fillText('Play a few sessions to see your trend', W / 2, H / 2);
+    c.textAlign = 'start'; return;
+  }
+  const pts = series.slice(-24);
+  const mx = Math.max(...pts, 1);
+  const xAt = i => pad + (W - pad * 2) * i / (pts.length - 1);
+  const yAt = v => pad + (baseY - pad) * (1 - v / mx);
+  /* area fill */
+  const grad = c.createLinearGradient(0, pad, 0, baseY);
+  grad.addColorStop(0, 'rgba(45,226,230,.34)'); grad.addColorStop(1, 'rgba(45,226,230,0)');
+  c.beginPath(); c.moveTo(xAt(0), baseY);
+  pts.forEach((v, i) => c.lineTo(xAt(i), yAt(v)));
+  c.lineTo(xAt(pts.length - 1), baseY); c.closePath(); c.fillStyle = grad; c.fill();
+  /* line (single series, 2px) */
+  c.beginPath(); pts.forEach((v, i) => i ? c.lineTo(xAt(i), yAt(v)) : c.moveTo(xAt(i), yAt(v)));
+  c.strokeStyle = '#2de2e6'; c.lineWidth = 2; c.lineJoin = 'round'; c.stroke();
+  /* endpoint marker + direct label (only the last point) */
+  const lx = xAt(pts.length - 1), ly = yAt(pts[pts.length - 1]);
+  c.beginPath(); c.arc(lx, ly, 4, 0, 7); c.fillStyle = '#2de2e6'; c.fill();
+  c.fillStyle = '#eafcff'; c.font = '800 12px Inter, sans-serif'; c.textAlign = 'right';
+  c.fillText(pts[pts.length - 1].toLocaleString(), lx - 6, ly < 20 ? ly + 15 : ly - 8); c.textAlign = 'start';
+}
+function drawSplit(makes, misses) {
+  const cv = $('splitCv'), c = cv.getContext('2d'), W = cv.width, H = cv.height;
+  c.clearRect(0, 0, W, H);
+  const cx = W / 2, cy = H / 2, r = 58, lw = 20, tot = makes + misses;
+  c.lineWidth = lw; c.lineCap = 'butt';
+  if (!tot) {
+    c.beginPath(); c.arc(cx, cy, r, 0, 7); c.strokeStyle = 'rgba(255,255,255,.1)'; c.stroke(); return;
+  }
+  const gap = 0.06;                       // 2px-ish surface gap between segments
+  const mkEnd = makes / tot * (Math.PI * 2);
+  c.beginPath(); c.arc(cx, cy, r, -Math.PI / 2 + gap, -Math.PI / 2 + mkEnd - gap);
+  c.strokeStyle = '#3dffa0'; c.stroke();
+  c.beginPath(); c.arc(cx, cy, r, -Math.PI / 2 + mkEnd + gap, -Math.PI / 2 + Math.PI * 2 - gap);
+  c.strokeStyle = '#ff5d5d'; c.stroke();
+  c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = '400 30px Anton, Impact, sans-serif';
+  c.fillText(Math.round(makes / tot * 100) + '%', cx, cy - 2);
+  c.font = '800 9px Inter, sans-serif'; c.fillStyle = 'rgba(255,255,255,.55)';
+  c.fillText('MAKES', cx, cy + 18);
+  c.textAlign = 'start'; c.textBaseline = 'alphabetic';
+}
 $('voiceSwitch').onclick = e => {
   voiceOn = !voiceOn;
   e.currentTarget.classList.toggle('on', voiceOn);

@@ -63,7 +63,7 @@
     80%{opacity:1}100%{opacity:0;transform:translateY(6px)}}
 
   /* ---------- HUD side ---------- */
-  .hud-mid{position:fixed;left:12px;bottom:calc(96px + env(safe-area-inset-bottom));z-index:18;display:flex;
+  .hud-mid{position:fixed;left:12px;bottom:calc(152px + env(safe-area-inset-bottom));z-index:18;display:flex;
     flex-direction:column;gap:7px;pointer-events:none}
   .chip{font-size:11px;font-weight:600;padding:7px 11px;border-radius:999px;background:var(--panel);
     border:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
@@ -72,7 +72,7 @@
   .dot.on{background:var(--good);box-shadow:0 0 10px var(--good)}
   .dot.warn{background:var(--orange);box-shadow:0 0 10px var(--orange);animation:blink 1s infinite}
   @keyframes blink{50%{opacity:.35}}
-  #spark{width:118px;height:34px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+  #spark{display:none}
 
   /* ---------- HUD dock ---------- */
   .hud-bot{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;z-index:20;
@@ -266,7 +266,7 @@
     backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 
   /* ---------- shot chart minimap ---------- */
-  #shotmap{position:fixed;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:20;
+  #shotmap{position:fixed;right:12px;bottom:calc(152px + env(safe-area-inset-bottom));z-index:20;
     width:118px;border-radius:16px;overflow:hidden;background:rgba(12,12,22,.6);border:1px solid var(--line);
     backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 8px 30px rgba(0,0,0,.45);
     display:none;pointer-events:none}
@@ -276,10 +276,23 @@
   #shotmap .cap b{color:var(--good)}
   #shotmap .cap i{color:var(--bad);font-style:normal}
   #shotmapCv{display:block;width:100%}
+  /* ---------- shooting stats strip ---------- */
+  #shotStrip{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(94px + env(safe-area-inset-bottom));
+    z-index:19;display:none;align-items:stretch;background:rgba(12,12,22,.66);border:1px solid var(--line);
+    border-radius:16px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    box-shadow:0 8px 30px rgba(0,0,0,.5);overflow:hidden;max-width:96vw}
+  #shotStrip.show{display:flex}
+  #shotStrip .ss{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    padding:8px 13px;min-width:56px;border-right:1px solid rgba(255,255,255,.09)}
+  #shotStrip .ss:last-child{border-right:none}
+  #shotStrip .v{font-family:Anton,Impact,sans-serif;font-size:20px;line-height:1;letter-spacing:.02em;color:var(--text)}
+  #shotStrip .v.good{color:var(--good)}#shotStrip .v.bad{color:var(--bad)}#shotStrip .v.cy{color:var(--cyan)}
+  #shotStrip .k{font-size:8px;font-weight:800;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
   @media (max-width:380px){
     .brand .wm .nm{font-size:13px}.ptsBadge .v{font-size:22px}
     .ringWrap{width:150px;height:150px}.ringWrap .big{font-size:34px}
     #shotmap{width:100px}
+    #shotStrip .ss{padding:7px 9px;min-width:46px}#shotStrip .v{font-size:17px}
   }
 </style>
 </head>
@@ -406,6 +419,15 @@
     <div class="ctr"><span class="big" id="ringBig">0</span><span class="cap" id="ringCap">Reps</span></div>
   </div>
   <div class="cue" id="drillCue"></div>
+</div>
+
+<!-- shooting stats strip -->
+<div id="shotStrip">
+  <div class="ss"><span class="v good" id="ssMake">0</span><span class="k">Make</span></div>
+  <div class="ss"><span class="v bad" id="ssMiss">0</span><span class="k">Miss</span></div>
+  <div class="ss"><span class="v" id="ssAngle">—</span><span class="k">Angle</span></div>
+  <div class="ss"><span class="v" id="ssTime">—</span><span class="k">Time</span></div>
+  <div class="ss"><span class="v cy" id="ssAcc">—</span><span class="k">Accuracy</span></div>
 </div>
 
 <!-- shot chart minimap -->
@@ -619,6 +641,7 @@ let editingHoop = false;
 let soundOn = true, voiceOn = true;
 let sessionStart = 0;
 let particles = [];
+let floaters = [];             // rising "+N" score popups on the overlay
 let rimPulse = 0;
 let hands = { L: 0, R: 0, X: 0 };
 let prevHand = null, prevHandT = 0;
@@ -924,13 +947,13 @@ function reconcileShot(localMake, aiMake, conf) {
     records.totalMakes = Math.max(0, records.totalMakes - 1);
     makeStreak = 0;
     fixLastMark(false);
-    updateShotStat(); updateAccuracy(); saveRecords();
+    updateShotStat(); updateAccuracy(); updateShotStrip(); saveRecords();
     ballaiBadge('✗ no good'); toast('Ball AI: no good'); chime([196], .1, 'sine', .1);
   } else if (!localMake && aiMake) {           // clipped swish → count it
     shots.makes++;
     records.totalMakes++;
     fixLastMark(true);
-    updateShotStat(); updateAccuracy(); saveRecords();
+    updateShotStat(); updateAccuracy(); updateShotStrip(); saveRecords();
     ballaiBadge('✓ counted'); toast('Ball AI: count it'); chime([784, 1046], .12);
   }
   setTimeout(() => ballaiOn && ballaiBadge('🧠 Ball AI'), 2600);
@@ -1015,10 +1038,12 @@ function loop() {
     const ev = shots.update(t, { x: tracker.x, y: tracker.y, vy: tracker.vy, present }, rim);
     if (ev) {
       snapshotArc(t, ev.type);
+      lastShot = estimateShot(t);
       const off = ev.type === 'miss' ? ev.dx : (tracker.x - rim.cx);
       addShotMark(off / Math.max(rim.halfW * 3, 1), ev.type === 'make');
       if (ev.type === 'make') onShot();
       else onMiss(ev);
+      updateShotStrip();
       /* silent second opinion from Gemini (fire-and-forget; ~1s later) */
       verifyShot(ev.type === 'make', t);
     }
@@ -1077,7 +1102,8 @@ function onDribble(t) {
   else if (dribbles.count % 50 === 0) say(`${dribbles.count} dribbles`);
   const [sx, sy] = v2s(tracker.x, tracker.y);
   burst(sx, sy, 14, ['#ff7a18', '#ffb347', '#ffffff']);
-  addPoints(5);
+  const g = addPoints(5);
+  floatPts(sx, sy - 18, '+' + g, '#ffe08a');
   drawSpark();
 }
 function updateShotStat() {
@@ -1092,7 +1118,8 @@ function onShot() {
   records.totalMakes++;
   makeStreak++;
   if (makeStreak > (records.hotHand || 0)) records.hotHand = makeStreak;
-  addPoints(100 + makeStreak * 25);   // buckets are big, streaks bigger
+  const gShot = addPoints(100 + makeStreak * 25);   // buckets are big, streaks bigger
+  if (hoop) { const [rx, ry] = v2s(hoop.cx * view.w, hoop.cy * view.h); floatPts(rx, ry - 24, '+' + gShot, '#3dffa0', true); }
   $('shotSub').textContent = 'wet 💦';
   setTimeout(updateAccuracy, 1500);
   toast(['BUCKETS!', 'SPLASH!', 'COUNT IT!', 'MONEY!'][shots.makes % 4]);
@@ -1122,15 +1149,21 @@ function updateAccuracy() {
 
 /* ---------- points + multiplier ---------- */
 function curMult() { return Math.max(1, dribbles.streak); }
+let lastCueMult = 1;
 function addPoints(base) {
-  const gained = Math.round(base * curMult());
+  const m = curMult();
+  const gained = Math.round(base * m);
   points += gained;
   if (points > (records.bestPoints || 0)) records.bestPoints = points;
   $('ptsNum').textContent = points.toLocaleString();
   pop2('ptsBadge');
-  const m = curMult(), mp = $('multPill');
+  const mp = $('multPill');
   mp.textContent = m + '×';
   mp.classList.toggle('show', m >= 2);
+  /* "get in your bag" cue when the multiplier climbs to a new tier */
+  if (m >= 2 && m >= lastCueMult + 2) { lastCueMult = m; ticker(`${m}× multiplier — get in your bag`); }
+  if (m < 2) lastCueMult = 1;
+  return gained;
 }
 function pop2(id) { const el = $(id); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); setTimeout(() => el.classList.remove('pop'), 140); }
 
@@ -1142,6 +1175,14 @@ function addShotMark(x, make) {
   $('smMake').textContent = shotMarks.filter(m => m.make).length;
   $('smMiss').textContent = shotMarks.filter(m => !m.make).length;
   drawShotChart();
+}
+function updateShotStrip() {
+  $('shotStrip').classList.add('show');
+  $('ssMake').textContent = shots.makes;
+  $('ssMiss').textContent = shots.attempts - shots.makes;
+  $('ssAngle').textContent = lastShot.angle != null ? lastShot.angle + '°' : '—';
+  $('ssTime').textContent = lastShot.flightMs != null ? (lastShot.flightMs / 1000).toFixed(2) + 's' : '—';
+  $('ssAcc').textContent = shots.attempts ? shots.accuracy() + '%' : '—';
 }
 function fixLastMark(make) {
   if (!shotMarks.length) return;
@@ -1221,6 +1262,29 @@ function snapshotArc(t, kind) {
   if (pts.length > 4) arcFx.push({ pts: pts.slice(), t0: t, kind });
   if (arcFx.length > 3) arcFx.shift();
 }
+/* estimate release angle + flight time from the shot arc (approximate, from the
+ * tracked trajectory) — returns {angle, flightMs} or nulls when unsure */
+function estimateShot(t) {
+  const pts = arcBuf.filter(p => t - p.t < 1500);
+  if (pts.length < 6) return { angle: null, flightMs: null };
+  let peak = 0;                                   // highest point = smallest y
+  for (let i = 1; i < pts.length; i++) if (pts[i].y < pts[peak].y) peak = i;
+  const rel = Math.max(0, peak - 4);              // a few frames before the apex = release
+  const a = pts[rel], b = pts[Math.min(rel + 2, peak)] || pts[peak];
+  const dt = Math.max(b.t - a.t, 1e-3);
+  const vx = (b.x - a.x) / dt, vy = (b.y - a.y) / dt;   // y grows downward
+  let angle = Math.atan2(-vy, Math.abs(vx) || 1e-3) * 180 / Math.PI;
+  angle = Math.max(20, Math.min(78, Math.round(angle)));
+  const flightMs = Math.round(t - a.t);
+  return { angle, flightMs: flightMs > 120 && flightMs < 2500 ? flightMs : null };
+}
+let lastShot = { angle: null, flightMs: null };
+/* rising "+N" score popup at a screen position (get in your bag) */
+function floatPts(sx, sy, txt, color, big) {
+  floaters.push({ x: sx, y: sy, txt, color: color || '#ffe08a', life: 1, big: !!big,
+    vx: (Math.random() - .5) * 30, vy: -70 - Math.random() * 30 });
+  if (floaters.length > 24) floaters.shift();
+}
 
 /* ---------- game modes ---------- */
 function fmtMs(ms) { return (ms / 1000).toFixed(1) + 's'; }
@@ -1246,6 +1310,8 @@ function resetCounters() {
   sparkCtx.clearRect(0, 0, 236, 68);
   points = 0; $('ptsNum').textContent = '0'; $('multPill').classList.remove('show');
   shotMarks = []; $('shotmap').classList.remove('show');
+  $('shotStrip').classList.remove('show'); lastShot = { angle: null, flightMs: null };
+  floaters = []; lastCueMult = 1;
   $('drill').classList.remove('show'); $('drillCue').textContent = '';
   sessionStart = performance.now();
 }
@@ -1649,6 +1715,19 @@ function draw(t, ballPresent, rim) {
     ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
+
+  /* ---- floating "+N" score popups ---- */
+  floaters = floaters.filter(f => f.life > 0);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const f of floaters) {
+    f.life -= dt * 0.9; f.x += f.vx * dt; f.y += f.vy * dt;
+    const a = Math.min(f.life * 1.4, 1);
+    ctx.globalAlpha = a;
+    ctx.font = `800 ${f.big ? 30 : 20}px Anton, Impact, sans-serif`;
+    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.55)';
+    ctx.strokeText(f.txt, f.x, f.y); ctx.fillStyle = f.color; ctx.fillText(f.txt, f.x, f.y);
+  }
+  ctx.globalAlpha = 1; ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
 }
 
 /* ---------- sparkline (dribble tempo) ---------- */

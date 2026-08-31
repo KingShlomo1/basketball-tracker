@@ -153,6 +153,30 @@
   .modeCard .rec{margin-left:auto;text-align:right;font-size:10px;color:var(--cyan);font-weight:800;
     letter-spacing:.08em;text-transform:uppercase;flex:none}
   .modeCard .rec b{font-size:18px;color:var(--text)}
+  /* drill-library card extras */
+  .modeCard .body{flex:1;min-width:0}
+  .modeCard .tagRow{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+  .modeCard .tag{display:inline-block;font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    padding:3px 7px;border-radius:6px;background:rgba(255,255,255,.07);color:var(--dim);border:1px solid rgba(255,255,255,.08)}
+  .modeCard .tag.rew{background:rgba(61,255,160,.14);color:var(--good);border-color:rgba(61,255,160,.25)}
+  .modeCard .diff{margin-left:auto;flex:none;align-self:flex-start;font-size:8.5px;font-weight:800;letter-spacing:.1em;
+    text-transform:uppercase;padding:4px 9px;border-radius:999px}
+  .diff.easy{background:rgba(61,255,160,.16);color:var(--good)}
+  .diff.med{background:rgba(255,179,71,.18);color:var(--orange2)}
+  .diff.hard{background:rgba(255,93,93,.18);color:var(--bad)}
+  /* weekly goal card */
+  .goalCard{background:linear-gradient(135deg,rgba(45,226,230,.1),rgba(123,47,247,.08));
+    border:1px solid rgba(45,226,230,.25);border-radius:18px;padding:16px;margin-bottom:14px}
+  .goalCard .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+  .goalCard .top b{font-family:Anton,Impact,sans-serif;font-size:15px;letter-spacing:.05em;text-transform:uppercase}
+  .goalCard .top .pct{font-size:12px;font-weight:800;color:var(--cyan)}
+  .goalCard .bar{height:9px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden;margin:8px 0}
+  .goalCard .bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--good));
+    box-shadow:0 0 12px rgba(45,226,230,.5);transition:width .4s}
+  .goalCard .ctl{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--dim);font-weight:600}
+  .goalCard .ctl .set{display:flex;align-items:center;gap:8px}
+  .goalCard .step{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.06);
+    color:var(--text);font-size:18px;font-weight:800;cursor:pointer;line-height:1;display:grid;place-items:center}
   .switchRow{display:flex;align-items:center;justify-content:space-between;padding:14px 4px 2px;font-size:13px;font-weight:600}
   .switch{position:relative;width:46px;height:26px;border-radius:99px;background:rgba(255,255,255,.12);
     border:1px solid var(--line);cursor:pointer;transition:background .2s;flex:none}
@@ -356,18 +380,36 @@
 <!-- mode picker -->
 <div class="sheet" id="modeSheet">
   <div class="panel">
-    <h2>Game <em>Modes</em></h2>
-    <div class="sub">Pick a challenge — records are saved on this device.</div>
+    <h2>Drill <em>Library</em></h2>
+    <div class="sub">Pre-built drills, tracked live. Records saved on this device.</div>
+
+    <div class="goalCard">
+      <div class="top"><b>🎯 Weekly shots goal</b><span class="pct" id="goalPct">0%</span></div>
+      <div class="bar"><i id="goalBar" style="width:0%"></i></div>
+      <div class="ctl">
+        <span id="goalProg">0 / 500 shots this week</span>
+        <span class="set"><button class="step" id="goalMinus">–</button><b id="goalNum" style="color:var(--text);min-width:44px;text-align:center">500</b><button class="step" id="goalPlus">+</button></span>
+      </div>
+    </div>
+
     <button class="modeCard" data-mode="free"><span class="ico">🏀</span>
-      <span><b>Free Play</b><span>Open run. Everything is tracked, nothing ends.</span></span></button>
+      <span class="body"><b>Free Play</b><span>Open run. Everything is tracked, nothing ends.</span>
+        <span class="tagRow"><span class="tag">All-round</span><span class="tag">Warm-up</span></span></span>
+      <span class="diff easy">Easy</span></button>
     <button class="modeCard" data-mode="sprint60"><span class="ico">⚡</span>
-      <span><b>Dribble Sprint</b><span>60 seconds. As many real dribbles as you can.</span></span>
+      <span class="body"><b>Dribble Sprint</b><span>60 seconds. As many real dribbles as you can.</span>
+        <span class="tagRow"><span class="tag">Ball handling</span><span class="tag">Conditioning</span><span class="tag rew">+5 / rep</span></span></span>
+      <span class="diff med">Medium</span>
       <span class="rec">Best<br><b id="recSprint">—</b></span></button>
     <button class="modeCard" data-mode="splash5"><span class="ico">💦</span>
-      <span><b>Splash Five</b><span>Race the clock to sink 5 buckets. Needs the hoop set.</span></span>
+      <span class="body"><b>Splash Five</b><span>Race the clock to sink 5 buckets. Needs the hoop set.</span>
+        <span class="tagRow"><span class="tag">Shooting</span><span class="tag">Finishing</span><span class="tag rew">+100 / make</span></span></span>
+      <span class="diff med">Medium</span>
       <span class="rec">Fastest<br><b id="recSplash">—</b></span></button>
     <button class="modeCard" data-mode="hothand"><span class="ico">🔥</span>
-      <span><b>Hot Hand</b><span>Keep making shots — one miss and it's over. Needs the hoop set.</span></span>
+      <span class="body"><b>Hot Hand</b><span>Keep making shots — one miss and it's over. Needs the hoop set.</span>
+        <span class="tagRow"><span class="tag">Shooting</span><span class="tag">Pressure</span><span class="tag rew">streak bonus</span></span></span>
+      <span class="diff hard">Hard</span>
       <span class="rec">Best run<br><b id="recHot">—</b></span></button>
     <div class="switchRow"><span>🎙 Voice announcer</span><div class="switch" id="voiceSwitch"></div></div>
     <div class="switchRow"><span>🧠 Ball AI referee <span style="font-weight:400;color:var(--dim)">— Gemini double-checks makes</span></span><div class="switch" id="ballaiSwitch"></div></div>
@@ -670,6 +712,33 @@ let records = { bestStreak: 0, bestDpm: 0, sprint60: 0, splash5Ms: 0, hotHand: 0
   maxKmh: 0, totalDribbles: 0, totalMakes: 0, bestPoints: 0 };
 try { Object.assign(records, JSON.parse(localStorage.getItem(REC_KEY) || '{}')); } catch {}
 function saveRecords() { try { localStorage.setItem(REC_KEY, JSON.stringify(records)); } catch {} }
+
+/* ---------- weekly shots goal (accountability across sessions) ---------- */
+function weekKey(d = new Date()) {
+  const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  dt.setUTCDate(dt.getUTCDate() - ((dt.getUTCDay() + 6) % 7));   // back to Monday
+  return dt.toISOString().slice(0, 10);
+}
+let weekly = { key: weekKey(), shots: 0, makes: 0, goal: 500 };
+try {
+  const w = JSON.parse(localStorage.getItem('cv_weekly') || '{}');
+  if (w.goal) weekly.goal = w.goal;
+  if (w.key === weekly.key) { weekly.shots = w.shots || 0; weekly.makes = w.makes || 0; }
+} catch {}
+function saveWeekly() { try { localStorage.setItem('cv_weekly', JSON.stringify(weekly)); } catch {} }
+function bumpWeek(made) {
+  if (weekKey() !== weekly.key) { weekly.key = weekKey(); weekly.shots = 0; weekly.makes = 0; }
+  weekly.shots++; if (made) weekly.makes++;
+  saveWeekly(); refreshGoalUI();
+}
+function refreshGoalUI() {
+  if (weekKey() !== weekly.key) { weekly.key = weekKey(); weekly.shots = 0; weekly.makes = 0; saveWeekly(); }
+  const pct = Math.min(100, Math.round(weekly.shots / Math.max(weekly.goal, 1) * 100));
+  const gp = $('goalPct'); if (!gp) return;
+  gp.textContent = pct + '%'; $('goalBar').style.width = pct + '%';
+  $('goalProg').textContent = `${weekly.shots} / ${weekly.goal} shots this week`;
+  $('goalNum').textContent = weekly.goal;
+}
 try { const s = localStorage.getItem('cv_hoop'); if (s) hoop = JSON.parse(s); } catch {}
 try { voiceOn = localStorage.getItem('cv_voice') !== '0'; } catch {}
 try { ballaiKey = localStorage.getItem('cv_gemini_key') || ''; } catch {}
@@ -947,12 +1016,14 @@ function reconcileShot(localMake, aiMake, conf) {
     records.totalMakes = Math.max(0, records.totalMakes - 1);
     makeStreak = 0;
     fixLastMark(false);
+    weekly.makes = Math.max(0, weekly.makes - 1); saveWeekly(); refreshGoalUI();
     updateShotStat(); updateAccuracy(); updateShotStrip(); saveRecords();
     ballaiBadge('✗ no good'); toast('Ball AI: no good'); chime([196], .1, 'sine', .1);
   } else if (!localMake && aiMake) {           // clipped swish → count it
     shots.makes++;
     records.totalMakes++;
     fixLastMark(true);
+    weekly.makes++; saveWeekly(); refreshGoalUI();
     updateShotStat(); updateAccuracy(); updateShotStrip(); saveRecords();
     ballaiBadge('✓ counted'); toast('Ball AI: count it'); chime([784, 1046], .12);
   }
@@ -1120,6 +1191,7 @@ function onShot() {
   if (makeStreak > (records.hotHand || 0)) records.hotHand = makeStreak;
   const gShot = addPoints(100 + makeStreak * 25);   // buckets are big, streaks bigger
   if (hoop) { const [rx, ry] = v2s(hoop.cx * view.w, hoop.cy * view.h); floatPts(rx, ry - 24, '+' + gShot, '#3dffa0', true); }
+  bumpWeek(true);
   $('shotSub').textContent = 'wet 💦';
   setTimeout(updateAccuracy, 1500);
   toast(['BUCKETS!', 'SPLASH!', 'COUNT IT!', 'MONEY!'][shots.makes % 4]);
@@ -1136,6 +1208,7 @@ function onMiss(ev) {
   updateShotStat();
   pop('statShot');
   updateAccuracy();
+  bumpWeek(false);
   chime([196], .12, 'sine', .12); vib(8);
   makeStreak = 0;
   const rimW = hoop ? hoop.w * view.w / 2 : 1;
@@ -1295,6 +1368,7 @@ function refreshRecordUI() {
   $('recTotals').textContent = `${records.totalDribbles} dribbles · ${records.totalMakes} buckets`;
   $('recStreak').textContent = records.bestStreak;
   const bp = $('recPoints'); if (bp) bp.textContent = (records.bestPoints || 0).toLocaleString();
+  refreshGoalUI();
   $('recSpeed').textContent = records.maxKmh ? `${records.maxKmh.toFixed(0)} km/h` : '—';
   $('voiceSwitch').classList.toggle('on', voiceOn);
 }
@@ -1403,6 +1477,8 @@ function endMode() {
 $('modeBtn').onclick = () => { refreshRecordUI(); $('modeSheet').classList.add('show'); };
 $('modeClose').onclick = () => $('modeSheet').classList.remove('show');
 document.querySelectorAll('.modeCard').forEach(b => b.onclick = () => startMode(b.dataset.mode));
+$('goalMinus').onclick = () => { weekly.goal = Math.max(50, weekly.goal - 50); saveWeekly(); refreshGoalUI(); };
+$('goalPlus').onclick = () => { weekly.goal = Math.min(5000, weekly.goal + 50); saveWeekly(); refreshGoalUI(); };
 $('voiceSwitch').onclick = e => {
   voiceOn = !voiceOn;
   e.currentTarget.classList.toggle('on', voiceOn);

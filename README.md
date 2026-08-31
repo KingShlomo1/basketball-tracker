@@ -23,7 +23,27 @@ browser and tracks, live:
   **on-fire mode** at 10+ and 20+ dribble streaks, live event ticker, and
   haptic buzzes on phones.
 
-Everything runs on-device. No video is uploaded anywhere.
+Everything runs on-device. No video is uploaded anywhere — unless you turn on
+**Ball AI** (below), which is off by default.
+
+## 🧠 Ball AI — a silent Gemini referee (optional)
+
+The make/miss and dribble counters run on fast geometric heuristics, which can
+occasionally misfire — a swish the ball detector clips as a miss, or a rattle-out
+it flukes as a make. **Ball AI** adds an optional second opinion: when you take a
+shot, a short burst of frames from that moment is sent to Google's **Gemini** to
+confirm whether the ball actually went through the rim, and it silently corrects
+the count when it disagrees (a small 🧠 badge is the only thing it says out loud).
+
+- **Off by default.** It only ever touches the network once you paste a key and
+  switch it on, so the on-device promise holds for everyone else.
+- **Free.** It uses Google AI Studio's free tier and calls Gemini **once per
+  shot** (never streams the feed), which stays inside the free rate limits. Grab
+  a free key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+- **Set it up** under **Modes → Ball AI referee**: paste the key, flip the toggle.
+- **Privacy:** when it's on, still frames of your *shots* leave your device and go
+  to Google to be verified. Dribbles, pose and everything else stay on-device.
+  Your key is stored only in your browser (`localStorage`).
 
 ## Files
 

@@ -237,6 +237,7 @@
   <div class="chip" id="handChip" style="display:none">🖐 <span id="handTxt"></span></div>
   <div class="chip" id="speedChip" style="display:none">⚡ <span id="speedTxt"></span></div>
   <div class="chip" id="aiChip" style="display:none">🧠 <span id="aiTxt"></span></div>
+  <div class="chip" id="ballaiChip" style="display:none"><span id="ballaiTxt">🧠 Ball AI</span></div>
   <canvas id="spark" width="236" height="68"></canvas>
 </div>
 
@@ -277,6 +278,15 @@
       <span><b>Hot Hand</b><span>Keep making shots — one miss and it's over. Needs the hoop set.</span></span>
       <span class="rec">Best run<br><b id="recHot">—</b></span></button>
     <div class="switchRow"><span>🎙 Voice announcer</span><div class="switch" id="voiceSwitch"></div></div>
+    <div class="switchRow"><span>🧠 Ball AI referee <span style="font-weight:400;color:var(--dim)">— Gemini double-checks makes</span></span><div class="switch" id="ballaiSwitch"></div></div>
+    <div id="ballaiSetup" style="padding:2px 4px 4px">
+      <input type="password" id="ballaiKeyInput" placeholder="Paste your free Gemini API key" autocomplete="off" spellcheck="false"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 11px;color:var(--text);font-size:12px;font-weight:600;outline:none">
+      <div style="font-size:10.5px;color:var(--dim);font-weight:400;line-height:1.5;margin-top:6px">
+        Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--orange2)">aistudio.google.com/apikey</a>.
+        Stored only on this device. When on, short clips of your <b>shots</b> are sent to Google to confirm makes — everything else stays on-device.
+      </div>
+    </div>
     <div class="switchRow" style="color:var(--dim);font-weight:400;font-size:11px">
       <span>All-time: <b id="recTotals" style="color:var(--text)">0 dribbles · 0 buckets</b> · best streak <b id="recStreak" style="color:var(--text)">0</b> · fastest ball <b id="recSpeed" style="color:var(--text)">—</b></span>
     </div>
@@ -519,6 +529,14 @@ let maxKmh = 0;
 let arcBuf = [], arcFx = [];
 let loopMs = 33, poseEvery = 1, frameNo = 0;
 
+/* ---------- Ball AI (Gemini vision referee) ---------- */
+const BALLAI_MODEL = 'gemini-2.5-flash';
+const BALLAI_MIN_MS = 1500;          // global throttle to protect the free quota
+let ballaiKey = '';                  // user's own free Gemini API key
+let ballaiOn = false;                // opt-in; off until a key is entered + toggled
+let ballaiBusy = false;              // in-flight guard: never fan out concurrent calls
+let ballaiLastT = -1e9;
+
 /* ---------- persistent records ---------- */
 const REC_KEY = 'cv_records';
 let records = { bestStreak: 0, bestDpm: 0, sprint60: 0, splash5Ms: 0, hotHand: 0,
@@ -527,6 +545,8 @@ try { Object.assign(records, JSON.parse(localStorage.getItem(REC_KEY) || '{}'));
 function saveRecords() { try { localStorage.setItem(REC_KEY, JSON.stringify(records)); } catch {} }
 try { const s = localStorage.getItem('cv_hoop'); if (s) hoop = JSON.parse(s); } catch {}
 try { voiceOn = localStorage.getItem('cv_voice') !== '0'; } catch {}
+try { ballaiKey = localStorage.getItem('cv_gemini_key') || ''; } catch {}
+try { ballaiOn = localStorage.getItem('cv_ballai') === '1' && !!ballaiKey; } catch {}
 
 /* ---------- audio + voice + haptics ---------- */
 let AC = null;
@@ -735,6 +755,81 @@ function showReplay() {
 }
 $('replayBox').addEventListener('pointerdown', () => { clearInterval(replayTimer); $('replayBox').classList.remove('show'); });
 
+/* ---------- Ball AI: silent Gemini referee for shots ----------
+ * Reuses the replay ring buffer (rbPool) — no extra capture path. On each shot
+ * event we send a short burst of frames to Gemini and let it silently correct a
+ * phantom make or a clipped swish. Opt-in, event-triggered (one call per shot),
+ * so it stays inside the free tier. Never throws into the render loop. */
+function ballaiBadge(txt, show = true) {
+  const c = $('ballaiChip'); if (!c) return;
+  c.style.display = show ? '' : 'none';
+  $('ballaiTxt').textContent = txt;
+}
+function grabBurst(n) {
+  const frames = [];
+  const start = Math.max(rbIdx - n, 0);
+  for (let i = start; i < rbIdx; i++) {
+    const cv = rbPool[i % RB_N];
+    if (cv) frames.push(cv.toDataURL('image/jpeg', 0.55).split(',')[1]);
+  }
+  return frames;
+}
+async function verifyShot(localMake, t) {
+  if (!ballaiOn || !ballaiKey || ballaiBusy || t - ballaiLastT < BALLAI_MIN_MS) return;
+  const frames = grabBurst(6);
+  if (frames.length < 3) return;
+  ballaiBusy = true; ballaiLastT = t;
+  ballaiBadge('👁 reviewing…');
+  try {
+    const body = {
+      contents: [{ parts: [
+        { text: 'These are sequential still frames from a basketball shot attempt, in order. ' +
+          'Did the ball pass DOWN through the hoop rim for a made basket? ' +
+          'A make = the ball clearly goes into and through the net. A rattle-out or airball is NOT a make. ' +
+          'Reply with JSON only: {"make": boolean, "confidence": number 0..1, "reason": short string}.' },
+        ...frames.map(data => ({ inlineData: { mimeType: 'image/jpeg', data } }))
+      ] }],
+      generationConfig: { temperature: 0, responseMimeType: 'application/json' }
+    };
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${BALLAI_MODEL}:generateContent`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': ballaiKey },
+        body: JSON.stringify(body) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    let txt = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    txt = txt.replace(/```json|```/g, '').trim();
+    const verdict = JSON.parse(txt);
+    reconcileShot(localMake, !!verdict.make, Number(verdict.confidence) || 0);
+  } catch (e) {
+    console.warn('Ball AI offline:', e);
+    ballaiBadge('🧠 offline');
+    setTimeout(() => ballaiOn && ballaiBadge('🧠 Ball AI'), 2500);
+  } finally {
+    ballaiBusy = false;
+  }
+}
+/* Apply the referee's verdict to the already-scored local result. Only overrides
+ * on confident disagreement; otherwise leaves the human-visible count alone.
+ * Note: does not un-end a finished timed mode (a game-ending miss stays ended). */
+function reconcileShot(localMake, aiMake, conf) {
+  if (conf < 0.7 || localMake === aiMake) {
+    ballaiBadge('✓ verified');
+  } else if (localMake && !aiMake) {           // phantom make → take it back
+    shots.makes = Math.max(0, shots.makes - 1);
+    records.totalMakes = Math.max(0, records.totalMakes - 1);
+    makeStreak = 0;
+    updateShotStat(); updateAccuracy(); saveRecords();
+    ballaiBadge('✗ no good'); toast('Ball AI: no good'); chime([196], .1, 'sine', .1);
+  } else if (!localMake && aiMake) {           // clipped swish → count it
+    shots.makes++;
+    records.totalMakes++;
+    updateShotStat(); updateAccuracy(); saveRecords();
+    ballaiBadge('✓ counted'); toast('Ball AI: count it'); chime([784, 1046], .12);
+  }
+  setTimeout(() => ballaiOn && ballaiBadge('🧠 Ball AI'), 2600);
+}
+
 /* ---------- main loop ---------- */
 let lastMediaT = 0;
 function loop() {
@@ -816,6 +911,8 @@ function loop() {
       snapshotArc(t, ev.type);
       if (ev.type === 'make') onShot();
       else onMiss(ev);
+      /* silent second opinion from Gemini (fire-and-forget; ~1s later) */
+      verifyShot(ev.type === 'make', t);
     }
   }
 
@@ -1045,6 +1142,27 @@ $('voiceSwitch').onclick = e => {
   try { localStorage.setItem('cv_voice', voiceOn ? '1' : '0'); } catch {}
   if (voiceOn) say('Voice on');
 };
+
+/* ---------- Ball AI setup wiring ---------- */
+function syncBallaiUI() {
+  $('ballaiSwitch').classList.toggle('on', ballaiOn);
+  $('ballaiKeyInput').value = ballaiKey;
+  ballaiBadge('🧠 Ball AI', ballaiOn);
+}
+$('ballaiKeyInput').oninput = e => {
+  ballaiKey = e.target.value.trim();
+  try { localStorage.setItem('cv_gemini_key', ballaiKey); } catch {}
+  if (!ballaiKey && ballaiOn) { ballaiOn = false; try { localStorage.setItem('cv_ballai', '0'); } catch {} }
+  syncBallaiUI();
+};
+$('ballaiSwitch').onclick = () => {
+  if (!ballaiKey) { toast('Paste a free Gemini key first'); return; }
+  ballaiOn = !ballaiOn;
+  try { localStorage.setItem('cv_ballai', ballaiOn ? '1' : '0'); } catch {}
+  syncBallaiUI();
+  if (ballaiOn) toast('Ball AI referee on');
+};
+syncBallaiUI();
 $('resAgain').onclick = () => startMode(mode.type);
 $('resFree').onclick = () => { $('resultSheet').classList.remove('show'); mode = { type: 'free', start: 0, done: false }; resetCounters(); };
 
